@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f6f4f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Hayat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Rubik:wght@400;500;600&display=swap">
+<style>
+/* Tek sütun telefon uygulaması: üstte puan/zincir, ortada öncelikler ve başlıklar, altta sabit Mali çubuğu */
+:root{
+  --bg:#eef1f4; --surface:#fff; --ink:#14222e; --muted:#5b6b78; --line:#d7dee5;
+  --house:#173b4f; --sun:#ffc23d; --sun-ink:#3a2a00; --leaf:#2f9e6b; --chip:#e9eef2;
+  --r-shop:#e7f3ff; --r-task:#fff4dc; --r-note:#eef0ff; --r-en:#ffe8e3; --r-rt:#e3f6ec; --r-plan:#f3e8ff;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f171d; --surface:#18232c; --ink:#e8eef2; --muted:#9aabb8; --line:#2a3944;
+  --house:#9fd3ea; --sun:#ffcd5c; --leaf:#4cc68e; --chip:#22303a;
+  --r-shop:#1b2d3d; --r-task:#2f2a1b; --r-note:#232640; --r-en:#3a2420; --r-rt:#1c3328; --r-plan:#2c2240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f171d; --surface:#18232c; --ink:#e8eef2; --muted:#9aabb8; --line:#2a3944;
+  --house:#9fd3ea; --sun:#ffcd5c; --leaf:#4cc68e; --chip:#22303a;
+  --r-shop:#1b2d3d; --r-task:#2f2a1b; --r-note:#232640; --r-en:#3a2420; --r-rt:#1c3328; --r-plan:#2c2240; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:16px 120px}
+.app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-offset:2px}
+.top{display:flex;align-items:center;gap:10px}
+.top h1{font-family:var(--display);font-weight:800;font-size:32px;margin:0;flex:1;color:var(--ink)}
+.pts{font-family:var(--display);font-weight:700;background:var(--sun);color:var(--sun-ink);border-radius:99px;padding:4px 12px;font-variant-numeric:tabular-nums;transition:transform .25s}
+.pts.pop{transform:scale(1.2)}
+.chains{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chain{background:var(--chip);border-radius:16px;padding:12px}
+.chain b{display:block;font-family:var(--display);font-size:30px;line-height:1;color:var(--leaf);font-variant-numeric:tabular-nums}
+.chain span{font-size:13px;color:var(--muted)}
+.level{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.level strong{color:var(--ink);font-weight:600}
+.bar{flex:1;height:10px;background:var(--chip);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sun);border-radius:99px;transition:width .4s}
+.poolbar{display:flex;align-items:center;justify-content:space-between;background:var(--r-note);border:0;border-radius:14px;padding:12px 14px;text-align:left;width:100%}
+.poolbar span:last-child{color:var(--house);font-weight:600}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.label button{border:0;background:none;color:var(--house);font-weight:600;text-transform:none;letter-spacing:0;font-size:13px;padding:4px}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px;background:var(--r-task);border:0;border-radius:14px;padding:12px 14px;min-height:52px;text-align:left;width:100%}
+.box{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--muted);display:grid;place-items:center;transition:all .2s}
+.row.done .box{background:var(--leaf);border-color:var(--leaf)}
+.row.done .box::after{content:"";width:7px;height:12px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.row .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.row.done .t{text-decoration:line-through;color:var(--muted)}
+.row small{color:var(--muted);font-size:12px}
+.empty{color:var(--muted);font-size:14px;background:var(--chip);border-radius:14px;padding:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{border:0;border-radius:16px;padding:12px 10px;min-height:100px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--tile,var(--chip));transition:transform .15s}
+.tile:active{transform:scale(.96)}
+.tile .ico{width:32px;height:32px;border-radius:10px;background:var(--surface);display:grid;place-items:center;font-family:var(--display);font-weight:800;color:var(--house);margin-bottom:auto}
+.tile b{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.tile small{font-size:12px;color:var(--muted)}
+.tile.ghost{background:transparent;border:2px dashed var(--line)}
+.note{font-size:12.5px;color:var(--muted)}
+/* Alt Mali çubuğu */
+.mali{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:5}
+.mali form{max-width:560px;margin:0 auto;display:flex;gap:8px}
+.mali input{flex:1;min-width:0;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;background:var(--bg);color:var(--ink)}
+.mali button{border:0;border-radius:14px;background:var(--house);color:var(--surface);font-weight:600;padding:0 18px}
+.mali p{max-width:560px;margin:6px auto 0;font-size:11.5px;color:var(--muted)}
+/* Alt sayfalar */
+.view{display:flex;flex-direction:column;gap:14px}
+.back{align-self:flex-start;border:0;background:var(--surface);color:var(--house);border-radius:99px;padding:8px 14px;font-weight:600}
+.view h2{font-family:var(--display);font-weight:800;font-size:28px;margin:0}
+.pi{background:var(--chip);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;transition:opacity .25s,transform .25s}
+.pi.out{opacity:0;transform:translateX(40px)}
+.pi q{quotes:"„" "“";overflow-wrap:anywhere}
+.pi small{color:var(--muted);font-size:12px}
+.folders{display:flex;flex-wrap:wrap;gap:6px}
+.folders button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13px}
+.folders button.sug{border-color:var(--house);color:var(--house);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.folders button.del{color:var(--muted)}
+.room{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:40px 12px;border-radius:20px;background:var(--tile,var(--chip))}
+.room .ico{width:64px;height:64px;border-radius:20px;background:var(--surface);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:26px;color:var(--house)}
+.room p{margin:0;color:var(--muted);max-width:32ch}
+.form{display:flex;flex-direction:column;gap:12px;background:var(--surface);border-radius:18px;padding:16px;border:1px solid var(--line)}
+.form label{font-size:13px;color:var(--muted)}
+.form input{border:2px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;background:var(--bg);color:var(--ink)}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.types button{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:10px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.types button small{color:var(--muted);font-size:12px;line-height:1.3}
+.types button.on{border-color:var(--house);background:var(--chip)}
+.primary{border:0;border-radius:14px;background:var(--leaf);color:#fff;font-weight:600;padding:12px}
+.danger{border:1px solid var(--line);border-radius:14px;background:transparent;color:var(--muted);padding:10px}
+.toast{position:fixed;left:16px;right:16px;bottom:96px;max-width:528px;margin:0 auto;background:var(--ink);color:var(--surface);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;transform:translateY(16px);opacity:0;transition:all .25s;pointer-events:none;z-index:6}
+.toast.show{transform:none;opacity:1}
+.toast b{color:var(--sun)}
+.backup{display:flex;gap:8px}
+.backup button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:10px;font:inherit}
+#mic{background:var(--chip);color:var(--ink);padding:0 14px;font-size:18px}
+#mic.on{background:var(--sun)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<div class="mali">
+  <form id="maliForm" autocomplete="off">
+    <input id="maliInput" type="text" placeholder="Mali'ye yaz ya da 🎤 ile söyle" aria-label="Mali'ye yaz">
+    <button type="button" id="mic" aria-label="Sesle söyle" hidden>🎤</button>
+    <button type="submit">Ekle</button>
+  </form>
+  <p id="saveNote">Kayıtların havuza düşer ve sadece bu telefonda durur. Alarm henüz yok.</p>
+</div>
+<input type="file" id="restore" accept="application/json,.json" hidden>
+<div class="toast" id="toast"><span id="toastMsg">Tamamlandı</span><b id="toastPts">+10</b></div>
+
+<script>
+(function(){
+  var DEFAULT = {
+    v:1, points:0, activeDays:[], doneDays:[],
+    headings:[
+      {id:"yapilacak",name:"Yapılacak",type:"category",color:"--r-task",icon:"✓"},
+      {id:"fikir",name:"Fikir",type:"category",color:"--r-note",icon:"✦"},
+      {id:"onemli",name:"Önemli",type:"category",color:"--r-en",icon:"!"},
+      {id:"planli",name:"Planlı",type:"category",color:"--r-plan",icon:"▦"},
+      {id:"alisveris",name:"Alışveriş",type:"category",color:"--r-shop",icon:"☰"},
+      {id:"ingilizce",name:"İngilizce",type:"room",color:"--r-en",icon:"Aa"},
+      {id:"rutinler",name:"Rutinler",type:"room",color:"--r-rt",icon:"↻"},
+      {id:"bos",name:"Boş oda",type:"room",color:"",icon:"·",empty:true}
+    ],
+    items:[]  // {id,text,created,heading|null,suggested|null,done:false,doneAt}
+  };
+  var S = JSON.parse(JSON.stringify(DEFAULT));
+  var view = {name:"home"};
+  var app = document.getElementById('app');
+
+  // ---------- kayıt: sadece bu telefonda ----------
+    function lsGet(){ try{ var s = localStorage.getItem('hayat-state'); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+  function lsSet(){ try{ localStorage.setItem('hayat-state', JSON.stringify(S)); }catch(e){} }
+  function save(){ lsSet(); }
+  function load(obj){
+    if(!obj || obj.v !== 1) return;
+    S = obj;
+    DEFAULT.headings.forEach(function(h){ if(!S.headings.some(function(x){return x.id===h.id})) {} });
+  }
+  load(lsGet());
+
+
+  // ---------- yardımcılar ----------
+  function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function streak(days){
+    var set = {}; days.forEach(function(d){ set[d]=1; });
+    var n=0, d=new Date();
+    if(!set[today()]) d.setDate(d.getDate()-1);
+    while(true){
+      var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      if(!set[k]) break; n++; d.setDate(d.getDate()-1);
+    }
+    return n;
+  }
+  function mark(arr){ var t=today(); if(arr.indexOf(t)<0) arr.push(t); }
+  function el(tag, attrs, kids){
+    var e=document.createElement(tag);
+    if(attrs) for(var k in attrs){ if(k==='class') e.className=attrs[k]; else if(k==='text') e.textContent=attrs[k]; else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2), attrs[k]); else if(k==='style') e.setAttribute('style',attrs[k]); else e.setAttribute(k,attrs[k]); }
+    (kids||[]).forEach(function(c){ if(c) e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+    return e;
+  }
+  function heading(id){ return S.headings.find(function(h){return h.id===id}); }
+  function buzz(){ try{ navigator.vibrate && navigator.vibrate(30); }catch(e){} }
+  var tt;
+  function award(n, msg){
+    S.points += n; buzz();
+    document.getElementById('toastMsg').textContent = msg;
+    document.getElementById('toastPts').textContent = '+' + n;
+    var t=document.getElementById('toast'); t.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove('show')},1600);
+    var p=document.getElementById('pts'); if(p){ p.classList.add('pop'); setTimeout(function(){p.classList.remove('pop')},250); }
+  }
+  function suggest(text){
+    var s=text.toLocaleLowerCase('tr');
+    if(/\b(al|ekle|listeye|market|süt|ekmek)\b/.test(s)) return 'alisveris';
+    if(/(fikir|belki|olsa iyi olur|-ebilir|yapsak)/.test(s)) return 'fikir';
+    if(/(önemli|acil|unutma)/.test(s)) return 'onemli';
+    if(/(yarın|bugün|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar|haftaya|saat|\d{1,2}[:.]\d{2}|'?d[ae]\b)/.test(s)) return 'planli';
+    if(/(ara|git|yap|hallet|kontrol|öde|gönder)/.test(s)) return 'yapilacak';
+    return null;
+  }
+
+  // ---------- ekranlar ----------
+  function render(){
+    app.textContent='';
+    if(view.name==='home') renderHome();
+    else if(view.name==='pool') renderPool();
+    else if(view.name==='heading') renderHeading(heading(view.id));
+    else if(view.name==='add') renderAdd();
+    window.scrollTo(0,0);
+  }
+
+  function renderHome(){
+    var lvl = Math.floor(S.points/100)+1, into = S.points%100;
+    var pool = S.items.filter(function(i){return !i.heading});
+    var todo = S.items.filter(function(i){ return (i.heading==='yapilacak'||i.heading==='onemli'||i.heading==='planli') && (!i.done || i.doneAt===today()); }).slice(0,3);
+    app.append(
+      el('div',{class:'top'},[el('h1',{text:'Bugün'}), el('span',{class:'pts',id:'pts',text:S.points+' puan'})]),
+      el('div',{class:'chains'},[
+        el('div',{class:'chain'},[el('b',{text:String(streak(S.doneDays))}), el('span',{text:'gün · görev bitirdim'})]),
+        el('div',{class:'chain'},[el('b',{text:String(streak(S.activeDays))}), el('span',{text:"gün · Mali'ye kayıt yaptım"})])
+      ]),
+      el('div',{class:'level'},[el('strong',{text:'Seviye '+lvl}), el('div',{class:'bar'},[el('i',{style:'width:'+into+'%'})]), el('span',{text:(100-into)+' puan kaldı'})]),
+      el('button',{class:'poolbar',type:'button',onclick:function(){view={name:'pool'};render();}},[
+        el('span',{text: pool.length ? 'Havuz · '+pool.length+' kayıt ayrılmayı bekliyor' : 'Havuz boş'}), el('span',{text:'Aç ›'})])
+    );
+    app.append(el('div',{class:'label'},[el('span',{text:'Bugünün 3 önceliği'})]));
+    var list = el('div',{class:'list'});
+    if(!todo.length) list.append(el('div',{class:'empty',text:'Henüz öncelik yok. Aşağıya yaz, sonra havuzda "Yapılacak", "Önemli" ya da "Planlı"ya ayır.'}));
+    todo.forEach(function(it){ list.append(itemRow(it, true)); });
+    app.append(list);
+    app.append(el('div',{class:'label'},[el('span',{text:'Başlıklarım'}), el('button',{type:'button',text:'+ Başlık ekle',onclick:function(){view={name:'add'};render();}})]));
+    var tiles = el('div',{class:'tiles'});
+    S.headings.forEach(function(h){
+      var n = S.items.filter(function(i){return i.heading===h.id && !i.done}).length;
+      var sub = h.empty ? 'sonra' : h.type==='room' ? 'oda' : n+' kayıt';
+      tiles.append(el('button',{class:'tile'+(h.empty?' ghost':''),type:'button',style:h.color?'--tile:var('+h.color+')':'',onclick:function(){buzz();view={name:'heading',id:h.id};render();}},[
+        el('span',{class:'ico',text:h.icon||h.name.charAt(0)}), el('b',{text:h.name}), el('small',{text:sub})]));
+    });
+    app.append(tiles);
+    app.append(el('p',{class:'note',text:'Tamamlanan iş +10 · 3 öncelik bitince +30 · havuzdan her ayırma +5 · havuz boşalınca +20'}));
+    app.append(el('div',{class:'backup'},[
+      el('button',{type:'button',text:'Yedek al',onclick:backupOut}),
+      el('button',{type:'button',text:'Yedeği yükle',onclick:function(){document.getElementById('restore').click();}})]));
+    app.append(el('p',{class:'note',text:'Haftada bir "Yedek al" de, dosyayı Drive\'ına kaydet.'}));
+  }
+
+  function backupOut(){
+    var blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hayat-yedek-'+today()+'.json';
+    document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1000);
+  }
+
+  function itemRow(it, isPriority){
+    return el('button',{class:'row'+(it.done?' done':''),type:'button',style:'background:var('+((heading(it.heading)||{}).color||'--chip')+')',onclick:function(){
+      it.done = !it.done;
+      if(it.done){
+        it.doneAt = today(); mark(S.doneDays);
+        var pr = S.items.filter(function(i){ return (i.heading==='yapilacak'||i.heading==='onemli'||i.heading==='planli') && (!i.done || i.doneAt===today()); }).slice(0,3);
+        var all = isPriority && pr.length===3 && pr.every(function(i){return i.done});
+        all ? award(40,'3 öncelik bitti, harika gün') : award(10,'Tamamlandı');
+      } else { it.doneAt=null; S.points=Math.max(0,S.points-10); buzz(); }
+      save(); render();
+    }},[el('span',{class:'box'}), el('span',{class:'t',text:it.text}), el('small',{text:(heading(it.heading)||{}).name||''})]);
+  }
+
+  function renderPool(){
+    var pool = S.items.filter(function(i){return !i.heading});
+    var cats = S.headings.filter(function(h){return h.type==='category'});
+    app.append(el('button',{class:'back',type:'button',text:'‹ Bugün',onclick:function(){view={name:'home'};render();}}), el('h2',{text:'Havuz'}));
+    if(!pool.length){ app.append(el('div',{class:'empty',text:'Havuz boş. Aşağıdaki çubuğa ne yazarsan önce buraya düşer.'})); return; }
+    app.append(el('p',{class:'note',text:'Klasöre dokun, kayıt yerine gider. Altı çizili olan Mali\'nin önerisi.'}));
+    var list=el('div',{class:'list'});
+    pool.slice().reverse().forEach(function(it){
+      var card = el('div',{class:'pi'});
+      var f = el('div',{class:'folders'});
+      var ordered = cats.slice().sort(function(a,b){ return (b.id===it.suggested) - (a.id===it.suggested); });
+      ordered.forEach(function(h){
+        f.append(el('button',{type:'button',class:h.id===it.suggested?'sug':'',text:h.name,onclick:function(){
+          card.classList.add('out'); it.heading=h.id; mark(S.activeDays);
+          var left = S.items.filter(function(i){return !i.heading}).length;
+          left ? award(5,h.name+' klasörüne gitti') : award(25,'Havuz boşaldı 🎉');
+          save(); setTimeout(render,250);
+        }}));
+      });
+      f.append(el('button',{type:'button',class:'del',text:'Sil',onclick:function(){ S.items=S.items.filter(function(x){return x!==it}); save(); render(); }}));
+      card.append(el('q',{text:it.text}), el('small',{text:new Date(it.created).toLocaleString('tr-TR',{weekday:'short',hour:'2-digit',minute:'2-digit'})}), f);
+      list.append(card);
+    });
+    app.append(list);
+  }
+
+  function renderHeading(h){
+    if(!h){ view={name:'home'}; return render(); }
+    app.append(el('button',{class:'back',type:'button',text:'‹ Bugün',onclick:function(){view={name:'home'};render();}}));
+    if(h.type==='room'){
+      var txt = h.id==='ingilizce' ? 'İngilizce ders serin bu odada tek dokunuşla açılacak. İçini birlikte kuracağız.'
+              : h.id==='rutinler' ? 'Sabah ve akşam rutinlerin, her biri kendi zinciriyle. İçeriğini birlikte belirleyeceğiz.'
+              : 'Bu oda şimdilik boş. Bir fikrin olduğunda projede bana yaz, birlikte kuralım.';
+      app.append(el('div',{class:'room',style:h.color?'--tile:var('+h.color+')':''},[el('span',{class:'ico',text:h.icon||'·'}), el('h2',{text:h.name}), el('p',{text:txt})]));
+    } else {
+      var items = S.items.filter(function(i){return i.heading===h.id});
+      app.append(el('h2',{text:h.name}));
+      var list=el('div',{class:'list'});
+      if(!items.length) list.append(el('div',{class:'empty',text:'Bu klasör boş. Havuzdan buraya kayıt ayırabilirsin.'}));
+      items.filter(function(i){return !i.done}).concat(items.filter(function(i){return i.done})).forEach(function(it){ list.append(itemRow(it,false)); });
+      app.append(list);
+    }
+    if(!DEFAULT.headings.some(function(d){return d.id===h.id})){
+      app.append(el('button',{class:'danger',type:'button',text:'Bu başlığı sil (içindekiler havuza döner)',onclick:function(){
+        S.items.forEach(function(i){ if(i.heading===h.id){ i.heading=null; } });
+        S.headings=S.headings.filter(function(x){return x!==h}); save(); view={name:'home'}; render();
+      }}));
+    }
+  }
+
+  function renderAdd(){
+    var type='category', colors=['--r-task','--r-note','--r-en','--r-plan','--r-shop','--r-rt'];
+    app.append(el('button',{class:'back',type:'button',text:'‹ Vazgeç',onclick:function(){view={name:'home'};render();}}), el('h2',{text:'Yeni başlık'}));
+    var name = el('input',{id:'newName',type:'text',placeholder:'ör. Sağlık',maxlength:'24'});
+    var bCat = el('button',{type:'button',class:'on'},[el('b',{text:'Kategori'}), el('small',{text:'İçine yapılacak, not, fikir atarsın. Havuzda klasör olur.'})]);
+    var bRoom = el('button',{type:'button'},[el('b',{text:'Oda'}), el('small',{text:'Kendi dünyası olan mini uygulama. İçini birlikte kurarız.'})]);
+    bCat.onclick=function(){type='category';bCat.classList.add('on');bRoom.classList.remove('on');};
+    bRoom.onclick=function(){type='room';bRoom.classList.add('on');bCat.classList.remove('on');};
+    var form = el('form',{class:'form'},[el('label',{for:'newName',text:'Ad'}), name, el('label',{text:'Ne olsun?'}), el('div',{class:'types'},[bCat,bRoom]), el('button',{class:'primary',type:'submit',text:'Kaydet'})]);
+    form.addEventListener('submit',function(e){
+      e.preventDefault(); var n=name.value.trim(); if(!n){ name.focus(); return; }
+      var used = S.headings.filter(function(h){return !h.empty}).length;
+      S.headings.splice(S.headings.length-1,0,{id:'h'+Date.now(),name:n,type:type,color:colors[used%colors.length],icon:n.charAt(0).toLocaleUpperCase('tr')});
+      save(); view={name:'home'}; render();
+    });
+    app.append(form);
+    setTimeout(function(){name.focus()},50);
+  }
+
+  // ---------- Mali çubuğu ----------
+  document.getElementById('maliForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var inp=document.getElementById('maliInput'), t=inp.value.trim(); if(!t) return;
+    S.items.push({id:'i'+Date.now(),text:t,created:Date.now(),heading:null,suggested:suggest(t),done:false,doneAt:null});
+    mark(S.activeDays); inp.value=''; save();
+    var n=S.items.filter(function(i){return !i.heading}).length;
+    document.getElementById('toastMsg').textContent='Havuza eklendi'; document.getElementById('toastPts').textContent=n+' bekliyor';
+    var t2=document.getElementById('toast'); t2.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){t2.classList.remove('show')},1400);
+    buzz(); render();
+  });
+
+  document.getElementById('restore').addEventListener('change',function(e){
+    var f=e.target.files[0]; if(!f) return;
+    f.text().then(function(t){
+      try{ var o=JSON.parse(t); if(!o||o.v!==1||!Array.isArray(o.items)) throw 0;
+        if(!confirm('Yedek yüklensin mi? Telefondaki kayıtların yerine geçer.')) return;
+        load(o); save(); view={name:'home'}; render(); }
+      catch(x){ alert('Bu dosya Hayat yedeği değil.'); }
+      e.target.value='';
+    });
+  });
+
+  // ---------- sesle söyle (Chrome) ----------
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR){
+    var mic=document.getElementById('mic'); mic.hidden=false;
+    mic.addEventListener('click',function(){
+      var r=new SR(); r.lang='tr-TR'; r.interimResults=false; r.maxAlternatives=1;
+      mic.classList.add('on');
+      r.onresult=function(ev){ document.getElementById('maliInput').value=ev.results[0][0].transcript; document.getElementById('maliForm').requestSubmit(); };
+      r.onend=function(){ mic.classList.remove('on'); };
+      r.onerror=function(){ mic.classList.remove('on'); };
+      r.start();
+    });
+  }
+
+  render();
+})();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+</script>
+
+</body>
+</html>
