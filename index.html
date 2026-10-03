@@ -101,7 +101,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
 .backup{display:flex;gap:8px}
 .backup button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:10px;font:inherit}
 #mic{background:var(--chip);color:var(--ink);padding:0 14px;font-size:18px}
-#mic.on{background:var(--sun)}
+#mic.on{background:var(--sun);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
 .shopadd{display:flex;gap:8px}
 .shopadd input{flex:1;min-width:0;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;background:var(--surface);color:var(--ink)}
 .shopadd button{border:0;border-radius:14px;background:var(--leaf);color:#fff;font-weight:600;padding:0 18px}
@@ -666,16 +667,56 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
   });
 
   // ---------- sesle söyle (Chrome) ----------
+  // Sen susunca 3 sn bekler, sonra kaydeder. İstersen 🎤'ye tekrar basıp hemen bitirirsin.
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(SR){
-    var mic=document.getElementById('mic'); mic.hidden=false;
+    var mic=document.getElementById('mic'), inp=document.getElementById('maliInput'), hint=document.getElementById('saveNote');
+    var hintText=hint.textContent, rec=null, listening=false, kept='', sess='', interim='', quiet=null, hardStop=null, startedAt=0;
+    var SILENCE=3000, FIRST_WAIT=7000, MAX=45000;
+    mic.hidden=false;
+    function lc(x){ return x.toLocaleLowerCase('tr'); }
+    function joined(){ return (kept+' '+sess+' '+interim).replace(/\s+/g,' ').trim(); }
+    function arm(ms){ clearTimeout(quiet); quiet=setTimeout(function(){ finish(); }, ms); }
+    function begin(){
+      rec=new SR(); rec.lang='tr-TR'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+      sess=''; interim='';
+      rec.onresult=function(ev){
+        interim='';
+        for(var i=ev.resultIndex;i<ev.results.length;i++){
+          var t=ev.results[i][0].transcript.trim(); if(!t) continue;
+          if(ev.results[i].isFinal){
+            // Android bazen aynı cümleyi büyüyerek tekrar gönderir: tekrarı ekleme
+            if(sess && lc(t).indexOf(lc(sess))===0) sess=t;
+            else if(!sess || lc(sess).slice(-lc(t).length)!==lc(t)) sess=(sess+' '+t).trim();
+          } else interim+=' '+t;
+        }
+        inp.value=joined(); arm(SILENCE);
+      };
+      rec.onerror=function(e){ if(e.error==='not-allowed'||e.error==='service-not-allowed'){ listening=false; hint.textContent='Mikrofon izni yok. Chrome ayarlarından izin ver.'; } };
+      rec.onend=function(){
+        // telefon kendi kendine durdurduysa ve süre dolmadıysa dinlemeye devam et
+        kept=(kept+' '+sess+' '+interim).trim(); sess=''; interim='';
+        if(listening && Date.now()-startedAt<MAX){ try{ begin(); return; }catch(x){} }
+        if(listening) finish();
+      };
+      rec.start();
+    }
+    function finish(){
+      if(!listening) return;
+      listening=false; clearTimeout(quiet); clearTimeout(hardStop);
+      var text=joined(); kept=''; sess=''; interim='';
+      try{ rec && rec.stop(); }catch(x){}
+      mic.classList.remove('on'); mic.textContent='🎤'; hint.textContent=hintText;
+      inp.value=text;
+      if(text) document.getElementById('maliForm').requestSubmit();
+    }
     mic.addEventListener('click',function(){
-      var r=new SR(); r.lang='tr-TR'; r.interimResults=false; r.maxAlternatives=1;
-      mic.classList.add('on');
-      r.onresult=function(ev){ document.getElementById('maliInput').value=ev.results[0][0].transcript; document.getElementById('maliForm').requestSubmit(); };
-      r.onend=function(){ mic.classList.remove('on'); };
-      r.onerror=function(){ mic.classList.remove('on'); };
-      r.start();
+      if(listening){ finish(); return; }
+      listening=true; kept=''; startedAt=Date.now(); inp.value='';
+      mic.classList.add('on'); mic.textContent='■';
+      hint.textContent='Dinliyorum… Bitince sus ya da ■ tuşuna bas.';
+      arm(FIRST_WAIT); hardStop=setTimeout(finish, MAX);
+      try{ begin(); }catch(x){ finish(); }
     });
   }
 
