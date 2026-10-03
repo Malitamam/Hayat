@@ -133,6 +133,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
 .row.late small{color:#d6453d;font-weight:600}
 .warn{color:#d6453d}
 .latebar{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;border-radius:14px;padding:12px 14px;background:#fde4e2;color:#a3261f;font:inherit;font-weight:600;text-align:left}
+.linkbtn{display:inline-block;text-decoration:none;padding:12px 22px;margin-top:4px}
+.gcal{display:flex;flex-direction:column;gap:2px;text-decoration:none;color:var(--ink);background:var(--surface);border:2px solid var(--house);border-radius:14px;padding:12px 14px}
+.gcal b{color:var(--house)}
+.gcal small{color:var(--muted);font-size:12.5px}
+.stepline{background:var(--r-task);border-radius:10px;padding:8px 10px;font-size:14px}
+.row.step{margin-left:18px}
+.reviewbar{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;border-radius:14px;padding:12px 14px;background:var(--sun);color:var(--sun-ink);font:inherit;font-weight:600;text-align:left}
+.textlink{align-self:center;border:0;background:none;color:var(--house);font:inherit;font-weight:600;padding:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -231,12 +239,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
   function buzz(){ try{ navigator.vibrate && navigator.vibrate(30); }catch(e){} }
   var tt;
   function award(n, msg){
-    S.points += n; buzz();
+    S.points += n; logPts(n); buzz();
     document.getElementById('toastMsg').textContent = msg;
     document.getElementById('toastPts').textContent = '+' + n;
     var t=document.getElementById('toast'); t.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){t.classList.remove('show')},1600);
     var p=document.getElementById('pts'); if(p){ p.classList.add('pop'); setTimeout(function(){p.classList.remove('pop')},250); }
   }
+  function logPts(n){ if(!S.daily) S.daily={}; var k=today(); S.daily[k]=Math.max(0,(S.daily[k]||0)+n); }
+  function unaward(n){ S.points=Math.max(0,S.points-n); logPts(-n); buzz(); }
   // ---------- Mali tarih/saat anlama ----------
   // "pazartesi saat 10'da dişçiyi ara" → {title:"Dişçiyi ara", date:"2026-10-05", time:"10:00"}
   var GUNLER = ['pazar','pazartesi','salı','çarşamba','perşembe','cuma','cumartesi'];
@@ -316,9 +326,15 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     S.tasks.push(t); return t;
   }
   function toggleTask(t, isPriority){
-    if(t.doneAt){ t.doneAt=null; S.points=Math.max(0,S.points-10); buzz(); }
+    if(t.doneAt){ t.doneAt=null; unaward(10);
+      if(t.parent){ var par=S.tasks.find(function(x){return x.id===t.parent}); if(par && par.doneAt){ par.doneAt=null; unaward(10); } } }
     else {
       t.doneAt=today(); mark(S.doneDays);
+      if(t.parent){
+        var par2=S.tasks.find(function(x){return x.id===t.parent});
+        var sib=S.tasks.filter(function(x){return x.parent===t.parent});
+        if(par2 && !par2.doneAt && sib.every(function(x){return x.doneAt})){ par2.doneAt=today(); award(30,'Büyük iş bitti 🎉'); save(); render(); return; }
+      }
       var pr=priorities(), all=isPriority && pr.length===3 && pr.every(function(x){return x.t ? x.t.doneAt : x.i.done;});
       all ? award(40,'3 öncelik bitti, harika gün') : award(10,'Tamamlandı');
     }
@@ -338,9 +354,20 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     var late = isLate(t);
     var row = el('button',{class:'row task'+(t.doneAt?' done':'')+(late?' late':''),type:'button',style:'background:var(--r-task)'},[
       el('span',{class:'box'}),
-      el('span',{class:'t',text:t.title}),
-      el('small',{text: late ? 'geçti · '+whenLabel(t) : opts.full ? whenLabel(t) : (t.time||'')})]);
+      el('span',{class:'t',text:(t.parent?'↳ ':'')+t.title}),
+      el('small',{text: (late ? 'geçti · '+whenLabel(t) : opts.full ? whenLabel(t) : (t.time||'')) + stepCount(t) + (t.gcal?' · 📅':'')})]);
+    if(t.parent) row.classList.add('step');
     return pressable(row, function(){ toggleTask(t, opts.priority); }, function(){ view={name:'task',id:t.id,back:view}; render(); });
+  }
+  function stepCount(t){ var st=S.tasks.filter(function(x){return x.parent===t.id}); return st.length ? ' · '+st.filter(function(x){return x.doneAt}).length+'/'+st.length+' adım' : ''; }
+  // Google Takvim: sen dokununca açılır, termini kendi takvimine kaydedersin
+  function gcalUrl(t){
+    var d=t.date.replace(/-/g,''), dates;
+    if(t.time){ var st=dOf(t.date); var hm=t.time.split(':'); st.setHours(+hm[0],+hm[1]); var en=new Date(st.getTime()+30*6e4);
+      function f(x){ return ymd(x).replace(/-/g,'')+'T'+String(x.getHours()).padStart(2,'0')+String(x.getMinutes()).padStart(2,'0')+'00'; }
+      dates=f(st)+'/'+f(en); }
+    else { var nx=dOf(t.date); nx.setDate(nx.getDate()+1); dates=d+'/'+ymd(nx).replace(/-/g,''); }
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(t.title)+'&dates='+dates+'&ctz=Europe%2FBerlin&details='+encodeURIComponent('Hayat\'tan eklendi · https://malitamam.github.io/Hayat/');
   }
   function priorities(){
     var t = today();
@@ -448,8 +475,73 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
         back.anchor=t.date; back.sel=t.date; view=back; render(); }}),
       el('button',{class:'danger',type:'button',text:'Sil',onclick:function(){
         if(!confirm('"'+t.title+'" silinsin mi?')) return;
-        S.tasks=S.tasks.filter(function(x){return x!==t}); save(); view=back; render(); }})
+        S.tasks=S.tasks.filter(function(x){return x!==t && x.parent!==t.id}); save(); view=back; render(); }})
     ]));
+    app.append(el('a',{class:'gcal',href:gcalUrl(t),target:'_blank',rel:'noopener',onclick:function(){ t.gcal=true; save(); setTimeout(render,300); }},[
+      el('b',{text: t.gcal ? 'Google Takvim\'e eklendi ✓ (tekrar ekle)' : 'Google Takvim\'e ekle'}),
+      el('small',{text:'Takvim açılır, "Kaydet"e basınca telefonun takvimi zamanında bildirim verir.'})]));
+    if(!t.parent){
+      var steps=S.tasks.filter(function(x){return x.parent===t.id});
+      var box=el('div',{class:'form'},[el('label',{text: steps.length ? 'Adımlar' : 'Böl · en fazla 3 küçük adım'})]);
+      if(steps.length){
+        steps.forEach(function(x,i){ box.append(el('div',{class:'stepline'},[el('span',{text:(i+1)+'. '+x.title+(x.doneAt?' ✓':'')})])); });
+        box.append(el('button',{class:'danger',type:'button',text:'Adımları kaldır',onclick:function(){ S.tasks=S.tasks.filter(function(x){return x.parent!==t.id}); save(); render(); }}));
+      } else {
+        var ins=[0,1,2].map(function(i){ return el('input',{type:'text',id:'step'+i,placeholder:['İlk küçük adım','İkinci adım','Üçüncü adım (isteğe bağlı)'][i]}); });
+        ins.forEach(function(x){ box.append(x); });
+        box.append(el('button',{class:'primary',type:'button',text:'Böl',onclick:function(){
+          var vals=ins.map(function(x){return x.value.trim()}).filter(Boolean); if(!vals.length) return;
+          var at=S.tasks.indexOf(t);
+          var made=vals.map(function(v,i){ return {id:t.id+'_'+i,title:v,date:t.date,time:t.time,created:Date.now(),doneAt:null,parent:t.id}; });
+          S.tasks.splice.apply(S.tasks,[at+1,0].concat(made));
+          save(); flash('Bölündü', vals.length+' adım'); render(); }}));
+      }
+      app.append(box);
+    }
+  }
+
+  // ---------- Pazar geri bakışı ----------
+  function weekStart(k){ var d=dOf(k||today()); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
+  function inWeek(k, mon){ if(!k) return false; var d=dOf(k), e=new Date(mon); e.setDate(e.getDate()+7); return d>=mon && d<e; }
+  function reviewDue(){ var d=new Date().getDay(); var wk=ymd(weekStart(d===1? ymd(new Date(Date.now()-864e5)) : today()));
+    return (d===0 || d===1) && S.reviewDone!==wk; }
+  function renderReview(){
+    var d=new Date().getDay(), mon=weekStart(d===1 ? ymd(new Date(Date.now()-864e5)) : today()), wk=ymd(mon);
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    app.append(el('button',{class:'back',type:'button',text:'‹ Bugün',onclick:function(){view={name:'home'};render();}}),
+      el('h2',{text:'Pazar geri bakışı'}), el('p',{class:'note',text:mon.getDate()+' '+AY_UZUN[mon.getMonth()]+' – '+sun.getDate()+' '+AY_UZUN[sun.getMonth()]+' · 1 dakika'}));
+    var pts=0; Object.keys(S.daily||{}).forEach(function(k){ if(inWeek(k,mon)) pts+=S.daily[k]; });
+    var doneT=S.tasks.filter(function(t){return inWeek(t.doneAt,mon)}), doneI=S.items.filter(function(i){return i.done && inWeek(i.doneAt,mon)});
+    var bought=S.shop.filter(function(x){return inWeek(x.boughtAt,mon)}).length;
+    var engN=(S.engDays||[]).filter(function(k){return inWeek(k,mon)}).length;
+    app.append(el('div',{class:'chains'},[
+      el('div',{class:'chain'},[el('b',{text:String(pts)}), el('span',{text:'bu hafta puan'})]),
+      el('div',{class:'chain'},[el('b',{text:String(doneT.length+doneI.length)}), el('span',{text:'iş bitti'})])]));
+    app.append(el('div',{class:'chains'},[
+      el('div',{class:'chain'},[el('b',{text:String(streak(S.doneDays))}), el('span',{text:'gün görev zinciri'})]),
+      el('div',{class:'chain'},[el('b',{text:String(engN)}), el('span',{text:'gün İngilizce açtın'})])]));
+    var list=el('div',{class:'list'});
+    doneT.concat(doneI).slice(0,8).forEach(function(x){ list.append(el('div',{class:'row done',style:'background:var(--r-task)'},[el('span',{class:'box'}), el('span',{class:'t',text:x.title||x.text})])); });
+    if(doneT.length+doneI.length){ app.append(el('div',{class:'label'},[el('span',{text:'Bu hafta bitirdiklerin'})]), list); }
+    if(bought) app.append(el('p',{class:'note',text:bought+' ürün alındı.'}));
+    var nextMon=new Date(mon); nextMon.setDate(mon.getDate()+7);
+    var next=S.tasks.filter(function(t){return !t.doneAt && inWeek(t.date,nextMon)}).sort(byTime);
+    var nl=el('div',{class:'list'});
+    if(!next.length) nl.append(el('div',{class:'empty',text:'Gelecek hafta için termin yok. Aklına gelen varsa şimdi Mali\'ye söyle.'}));
+    next.forEach(function(t){ nl.append(taskRow(t,{full:true})); });
+    app.append(el('div',{class:'label'},[el('span',{text:'Gelecek hafta'})]), nl);
+    var pool=S.items.filter(function(i){return !i.heading}).length;
+    if(pool) app.append(el('button',{class:'poolbar',type:'button',onclick:function(){view={name:'pool'};render();}},[el('span',{text:'Havuzda '+pool+' kayıt var, ayıralım mı?'}), el('span',{text:'Aç ›'})]));
+    if(S.reviewDone===wk) app.append(el('div',{class:'empty',text:'Bu haftanın geri bakışı tamam ✓'}));
+    else app.append(el('button',{class:'primary',type:'button',text:'Geri bakışı bitirdim · +20',onclick:function(){ S.reviewDone=wk; award(20,'Hafta kapandı'); save(); render(); }}));
+    // her pazar 19:00 bildirimi: Google Takvim'de tekrarlayan etkinlik
+    var ns=new Date(); ns.setDate(ns.getDate()+((7-ns.getDay())%7)); ns.setHours(19,0,0,0); if(ns<new Date()) ns.setDate(ns.getDate()+7);
+    var f=function(x){ return ymd(x).replace(/-/g,'')+'T'+String(x.getHours()).padStart(2,'0')+String(x.getMinutes()).padStart(2,'0')+'00'; }, ne=new Date(ns.getTime()+15*6e4);
+    var url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Hayat · Pazar geri bakışı')+'&dates='+f(ns)+'/'+f(ne)+
+      '&ctz=Europe%2FBerlin&recur='+encodeURIComponent('RRULE:FREQ=WEEKLY;BYDAY=SU')+'&details='+encodeURIComponent('1 dakikalık hafta özeti: https://malitamam.github.io/Hayat/#pazar');
+    app.append(el('a',{class:'gcal',href:url,target:'_blank',rel:'noopener',onclick:function(){ S.reviewReminder=true; save(); setTimeout(render,300); }},[
+      el('b',{text: S.reviewReminder ? 'Pazar bildirimi kuruldu ✓ (tekrar kur)' : 'Her pazar 19:00\'da bildirim kur'}),
+      el('small',{text:'Google Takvim\'de her pazar tekrarlayan bir hatırlatma olur. Bildirime dokununca buraya gelirsin.'})]));
   }
 
   function flash(msg, sub){
@@ -476,6 +568,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     else if(view.name==='heading') renderHeading(heading(view.id));
     else if(view.name==='add') renderAdd();
     else if(view.name==='task') renderTask();
+    else if(view.name==='review') renderReview();
     window.scrollTo(0,0);
   }
 
@@ -493,6 +586,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
       el('button',{class:'poolbar',type:'button',onclick:function(){view={name:'pool'};render();}},[
         el('span',{text: pool.length ? 'Havuz · '+pool.length+' kayıt ayrılmayı bekliyor' : 'Havuz boş'}), el('span',{text:'Aç ›'})])
     );
+    if(reviewDue()) app.append(el('button',{class:'reviewbar',type:'button',onclick:function(){view={name:'review'};render();}},[
+      el('span',{text:'Pazar geri bakışı · 1 dakika'}), el('span',{text:'Aç ›'})]));
     if(late.length) app.append(el('button',{class:'latebar',type:'button',onclick:function(){view={name:'heading',id:'yapilacak'};render();}},[
       el('span',{text:'Zamanı geçen '+late.length+' termin var'}), el('span',{text:'Bak ›'})]));
     app.append(el('div',{class:'label'},[el('span',{text:'Bugünün 3 önceliği'})]));
@@ -515,6 +610,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
       el('button',{type:'button',text:'Yedek al',onclick:backupOut}),
       el('button',{type:'button',text:'Yedeği yükle',onclick:function(){document.getElementById('restore').click();}})]));
     app.append(el('p',{class:'note',text:'Haftada bir "Yedek al" de, dosyayı Drive\'ına kaydet.'}));
+    app.append(el('button',{class:'textlink',type:'button',text:'Haftanın geri bakışı ›',onclick:function(){view={name:'review'};render();}}));
   }
 
   function backupOut(){
@@ -531,7 +627,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
         var pr = priorities();
         var all = isPriority && pr.length===3 && pr.every(function(x){return x.t ? x.t.doneAt : x.i.done;});
         all ? award(40,'3 öncelik bitti, harika gün') : award(10,'Tamamlandı');
-      } else { it.doneAt=null; S.points=Math.max(0,S.points-10); buzz(); }
+      } else { it.doneAt=null; unaward(10); }
       save(); render();
     }},[el('span',{class:'box'}), el('span',{class:'t',text:it.text}), el('small',{text:(heading(it.heading)||{}).name||''})]);
   }
@@ -572,7 +668,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     if(h.id==='alisveris'){ renderShop(h); return; }
     if(h.id==='yapilacak'){ renderTodo(); return; }
     if(h.type==='room'){
-      var txt = h.id==='ingilizce' ? 'İngilizce ders serin bu odada tek dokunuşla açılacak. İçini birlikte kuracağız.'
+      if(h.id==='ingilizce'){
+        app.append(el('div',{class:'room',style:'--tile:var('+h.color+')'},[el('span',{class:'ico',text:h.icon}), el('h2',{text:'İngilizce'}),
+          el('p',{text:'Business English haftaların, bölüm bölüm. Bölüme dokun, büyüt, ekranı doldur.'}),
+          el('a',{class:'primary linkbtn',href:'https://claude.ai/artifact/HwLZsanVyYerDNJg7PdTVU',target:'_blank',rel:'noopener',onclick:function(){ if(!S.engDays) S.engDays=[]; mark(S.engDays); save(); }},['Dersleri aç ›']),
+          el('small',{class:'note',text:'Claude uygulamasında açılır, sadece sen görebilirsin.'})]));
+        return;
+      }
+      var txt = h.id==='ingilizce' ? ''
               : h.id==='rutinler' ? 'Sabah ve akşam rutinlerin, her biri kendi zinciriyle. İçeriğini birlikte belirleyeceğiz.'
               : 'Bu oda şimdilik boş. Bir fikrin olduğunda projede bana yaz, birlikte kuralım.';
       app.append(el('div',{class:'room',style:h.color?'--tile:var('+h.color+')':''},[el('span',{class:'ico',text:h.icon||'·'}), el('h2',{text:h.name}), el('p',{text:txt})]));
@@ -609,7 +712,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     if(!S.shop.length) list.append(el('div',{class:'empty',text:'Liste boş. Yukarıya ya da Mali çubuğuna "süt ve ekmek ekle" yaz.'}));
     open.concat(got).forEach(function(x){
       list.append(el('button',{class:'row'+(x.boughtAt?' done':''),type:'button',style:'background:var(--r-shop)',onclick:function(){
-        if(x.boughtAt){ x.boughtAt=null; S.points=Math.max(0,S.points-2); buzz(); }
+        if(x.boughtAt){ x.boughtAt=null; unaward(2); }
         else {
           x.boughtAt=today();
           var left=S.shop.filter(function(y){return !y.boughtAt}).length;
@@ -720,6 +823,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     });
   }
 
+  if(location.hash==='#pazar'){ view={name:'review'}; history.replaceState(null,'',location.pathname); }
   render();
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
