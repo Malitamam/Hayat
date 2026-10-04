@@ -470,6 +470,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
+  var APP_VERSION = '0.5.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -1539,11 +1540,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('button',{type:'button',text:'Yedek al',onclick:backupOut}),
         el('button',{type:'button',text:'Yedeği yükle',onclick:function(){document.getElementById('restore').click();}})]),
       el('p',{class:'note',text:'Haftada bir "Yedek al" de, dosyayı Drive\'ına kaydet. Kayıtların sadece bu telefonda.'}),
-      el('p',{class:'note',text:'Puanlar: biten iş +10 · 3 öncelik bitince +30 · havuzdan her ayırma +5 · havuz boşalınca +20 · Pazar geri bakışı +20'}));
+      el('p',{class:'note',text:'Puanlar: biten iş +10 · 3 öncelik bitince toplam +40 · havuzdan her ayırma +5 · havuz boşalınca toplam +25 · Pazar geri bakışı +20'}),
+      el('p',{class:'note',text:'Hayat sürüm '+APP_VERSION}));
   }
 
   function backupOut(){
-    var blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
+    var blob=new Blob([JSON.stringify(Object.assign({app:APP_VERSION, exportedAt:new Date().toISOString()}, S),null,1)],{type:'application/json'});
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hayat-yedek-'+today()+'.json';
     document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1000);
   }
