@@ -346,6 +346,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .fixform .primary{min-height:48px}
 .fixline{display:flex;align-items:center;gap:8px;border:0;background:var(--paper);border-radius:12px;padding:8px 10px;font:inherit;font-size:13px;color:var(--ink-2);text-align:left;min-height:40px}
 .fixline svg{width:16px;height:16px;flex:none;color:var(--sun-deep)}
+.row .cnt{flex:none;font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.nav button[disabled]{opacity:.35}
 [hidden]{display:none!important}
 
 /* ders görüntüleyici (tam ekran, hep koyu) */
@@ -971,6 +973,44 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   function inWeek(k, mon){ if(!k) return false; var d=dOf(k), e=new Date(mon); e.setDate(e.getDate()+7); return d>=mon && d<e; }
   function reviewDue(){ var d=new Date().getDay(); var wk=ymd(weekStart(d===1? ymd(new Date(Date.now()-864e5)) : today()));
     return (d===0 || d===1) && S.reviewDone!==wk; }
+  // ---------- Geçen hafta raporu: "Geçen hafta ne yaptın?" ----------
+  function renderReport(){
+    var mon = view.wk ? dOf(view.wk) : (function(){ var m=weekStart(); m.setDate(m.getDate()-7); return m; })();
+    var sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    var thisWk = ymd(weekStart()), isNow = ymd(mon)===thisWk, isLast = ymd(mon)===ymd(new Date(weekStart().getFullYear(), weekStart().getMonth(), weekStart().getDate()-7));
+    function go(n){ var d=new Date(mon); d.setDate(d.getDate()+7*n); view.wk=ymd(d); render(true); }
+    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']),
+      el('h2',{text: isNow ? 'Bu hafta' : isLast ? 'Geçen hafta' : 'Hafta raporu'}),
+      el('div',{class:'nav'},[el('button',{type:'button','aria-label':'Önceki hafta',onclick:function(){go(-1)}},[ic('left')]),
+        el('span',{class:'mid',style:'text-align:center',text:mon.getDate()+' '+AY_UZUN[mon.getMonth()]+' – '+sun.getDate()+' '+AY_UZUN[sun.getMonth()]}),
+        el('button',isNow ? {type:'button','aria-label':'Sonraki hafta',disabled:'',onclick:function(){}} : {type:'button','aria-label':'Sonraki hafta',onclick:function(){ go(1); }},[ic('right')])]));
+    // kayıt defteri: kaç kez, hangi günler
+    var list = el('div',{class:'list'}), any = false;
+    S.trackers.forEach(function(t){
+      var ls = S.logs.filter(function(l){ return l.tr===t.id && inWeek(l.date, mon); }).sort(function(a,b){return a.date.localeCompare(b.date)});
+      if(!ls.length) return; any = true;
+      var days = []; ls.forEach(function(l){ var g=GUN_KISA[dOf(l.date).getDay()]; if(days.indexOf(g)<0) days.push(g); });
+      var sp = ls.reduce(function(a,l){ return a+(l.amount||0); },0);
+      list.append(el('div',{class:'row'},[trIco(t), el('span',{class:'tx'},[el('span',{class:'t',text:t.name}), el('small',{text:days.join(', ')+(sp?' · '+money(sp):'')})]), el('b',{class:'cnt',text:ls.length+'×'})]));
+    });
+    app.append(el('div',{class:'label'},[el('span',{text:'Kayıt defteri'})]));
+    app.append(any ? list : el('div',{class:'empty',text:'Bu hafta kayıt yok. "Alışverişe gittim", "tıraş oldum" gibi söylediklerin burada toplanır.'}));
+    // iş, alışveriş, para, puan
+    var doneT = S.tasks.filter(function(t){return !t.parent && inWeek(t.doneAt,mon)}).length, doneI = S.items.filter(function(i){return i.done && inWeek(i.doneAt,mon)}).length;
+    var planned = S.tasks.filter(function(t){return !t.parent && inWeek(t.date,mon)}).length;
+    var bought = S.shop.filter(function(x){return inWeek(x.boughtAt,mon)}).length;
+    var pts=0; Object.keys(S.daily||{}).forEach(function(k){ if(inWeek(k,mon)) pts+=S.daily[k]; });
+    var gider=0; S.money.forEach(function(m){ if(m.type==='gider' && m.cur==='€' && inWeek(m.date,mon)) gider+=m.amount; });
+    app.append(el('div',{class:'label'},[el('span',{text:'Genel'})]),
+      el('div',{class:'chains'},[
+        el('div',{class:'chain'},[el('b',{text:String(doneT+doneI)}), el('span',{text: planned ? 'iş bitti · '+planned+' terminden' : 'iş bitti'})]),
+        el('div',{class:'chain'},[el('b',{text:String(pts)}), el('span',{text:'puan'})])]),
+      el('div',{class:'chains'},[
+        el('div',{class:'chain'},[el('b',{text:money(gider)}), el('span',{text:'gider'})]),
+        el('div',{class:'chain'},[el('b',{text:String(bought)}), el('span',{text:'ürün alındı'})])]));
+    // Pazar geri bakışından farkı: bu ekran sadece bakmak için, puan vermez
+    app.append(el('p',{class:'note',text:'Sadece bakmak için. Hafta özeti kartı Pazar günü ayrıca gelir.'}));
+  }
   function renderReview(){
     var d=new Date().getDay(), mon=weekStart(d===1 ? ymd(new Date(Date.now()-864e5)) : today()), wk=ymd(mon);
     var sun=new Date(mon); sun.setDate(mon.getDate()+6);
@@ -1039,11 +1079,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     else if(view.name==='review') renderReview();
     else if(view.name==='rooms') renderRooms();
     else if(view.name==='logbook') renderLogbook();
+    else if(view.name==='report') renderReport();
     else if(view.name==='money') renderMoney();
     updateTabs();
     window.scrollTo(0, keep ? y : 0);
   }
-  function tabOf(v){ if(v.name==='home'||v.name==='review'||v.name==='logbook'||v.name==='money') return 'home'; if(v.name==='pool') return 'pool';
+  function tabOf(v){ if(v.name==='home'||v.name==='review'||v.name==='logbook'||v.name==='money'||v.name==='report') return 'home'; if(v.name==='pool') return 'pool';
     if((v.name==='heading' && v.id==='yapilacak') || v.name==='task') return 'cal'; return 'rooms'; }
   function updateTabs(){
     var cur=tabOf(view);
@@ -1249,7 +1290,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       }
       list.append(card);
     });
-    app.append(list);
+    app.append(el('button',{class:'primary',type:'button',text:'Geçen hafta ne yaptın?',onclick:function(){ view={name:'report'}; render(); }}), list);
     var f = el('form',{class:'shopadd',autocomplete:'off'},[
       el('input',{type:'text',id:'trIn',placeholder:'Yeni takip, ör. Spor','aria-label':'Yeni takip adı',maxlength:'24'}),
       el('button',{type:'submit',text:'Ekle'})]);
@@ -1388,6 +1429,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       lb.append(el('div',{class:'trow'},[trIco(t), el('span',{class:'tx'},[el('b',{text:t.name}), el('small',{text:trSub(t)})]),
         el('button',{class:'plus',type:'button','aria-label':t.name+' bugün',onclick:function(){ logToday(t); }},[ic('plus'),'Bugün'])]));
     });
+    lb.append(el('button',{class:'textlink',type:'button',text:'Geçen hafta ne yaptın? ›',onclick:function(){ view={name:'report'}; render(); }}));
     // Para: bu ayın özeti
     var now = new Date(), pm = el('div',{class:'big'},[head(el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), 'Gelir · Gider · Yatırım', AY_UZUN[now.getMonth()]+' özeti', function(){ view={name:'money'}; render(); }), msum(monthKey(today())),
       S.fixed.length ? el('button',{class:'fixline',type:'button',onclick:function(){ view={name:'money'}; render(); }},[ic(fixLeft().length ? 'alert' : 'tick'), el('span',{text: fixLeft().length ? 'Sabit gider: '+fixLeft().length+' ödenmedi ('+fixLeft().slice(0,2).map(function(f){return f.name}).join(', ')+(fixLeft().length>2?'…':'')+')' : 'Sabit giderlerin hepsi ödendi'})]) : null]);
@@ -1605,6 +1647,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   document.getElementById('maliForm').addEventListener('submit',function(e){
     e.preventDefault();
     var inp=document.getElementById('maliInput'), t=inp.value.trim(); if(!t) return;
+    if(/(geçen|bu)\s+hafta(\s+neler)?\s+ne\s+yap|hafta\s+raporu|haftalık\s+rapor/.test(t.toLocaleLowerCase('tr'))){ closeMali(); inp.value=''; view={name:'report', wk: /^\s*bu/.test(t.toLocaleLowerCase('tr')) ? ymd(weekStart()) : null}; render(); return; }
     var ask = askAmt;
     if(ask){
       var amt = parseAmount(t); closeMali(); inp.value='';
