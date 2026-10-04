@@ -285,6 +285,17 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 /* ödül kartı */
 .toast{position:fixed;left:16px;right:16px;bottom:calc(88px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;background:var(--toast);color:var(--toast-ink);box-shadow:var(--shadow);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;transform:translateY(16px);opacity:0;transition:all .25s;pointer-events:none;z-index:16}
 .toast.show{transform:none;opacity:1}
+.sheet2{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);padding:16px}
+.sheet2 .sbox{width:100%;max-width:528px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.sheet2 h3{margin:0;font-size:20px} .sheet2 p{margin:0;color:var(--ink-2)}
+.sheet2 .gcal{min-height:56px}
+.sheet2 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sheet2 button{min-height:52px;border-radius:16px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;font-weight:600}
+.sheet2 button.primary{background:var(--house);color:var(--on-leaf,#fff);border-color:var(--house)}
+.sheet2.alarmring{align-items:center}
+.sheet2.alarmring .sbox{text-align:center;align-items:stretch}
+.sheet2.alarmring .bell{font-size:52px;line-height:1;animation:bellshake .5s ease-in-out infinite alternate}
+@keyframes bellshake{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
 .toast span{flex:1}
 .toast b{color:var(--sun);font-family:var(--display);font-weight:800}
 
@@ -752,7 +763,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     f.addEventListener('submit',function(e){
       e.preventDefault(); var v=document.getElementById('todoIn').value.trim(); if(!v) return;
       var w=parseWhen(v);
-      if(w){ var nt=addTask(w); view.anchor=nt.date; view.sel=nt.date; flash('Takvime eklendi', whenLabel(nt)); }
+      if(w){ var nt=addTask(w); view.anchor=nt.date; view.sel=nt.date; if(nt.time) setTimeout(function(){ alarmSet(nt); },0); else flash('Takvime eklendi', whenLabel(nt)); }
       else { S.items.push({id:'i'+Date.now(),text:v,created:Date.now(),heading:'yapilacak',suggested:null,done:false,doneAt:null}); flash('Tarihsiz listeye eklendi',''); }
       mark(S.activeDays); save(); render();
     });
@@ -868,7 +879,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(el('div',{class:'form'},[
       el('label',{for:'tTitle',text:'Ne yapılacak'}), ti, el('label',{for:'tDate',text:'Gün'}), di, el('label',{for:'tTime',text:'Saat (boş bırakabilirsin)'}), hi,
       el('button',{class:'primary',type:'button',text:'Kaydet',onclick:function(){
-        t.title=ti.value.trim()||t.title; if(di.value) t.date=di.value; t.time=hi.value||null; save();
+        t.title=ti.value.trim()||t.title; if(di.value) t.date=di.value; t.time=hi.value||null; t.alarmed=false; t.snooze=0; save(); alarmTick();
         back.anchor=t.date; back.sel=t.date; view=back; render(); }})]));
     app.append(el('button',{class:'danger',type:'button',onclick:function(){
         if(!confirm('"'+t.title+'" silinsin mi?')) return;
@@ -1108,6 +1119,50 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       el('b',{text: S.reviewReminder ? 'Pazar bildirimi kuruldu ✓ (tekrar kur)' : 'Her pazar 19:00\'da bildirim kur'}),
       el('small',{text:'Google Takvim\'de her pazar tekrarlayan bir hatırlatma olur. Bildirime dokununca buraya gelirsin.'})])]));
   }
+
+  // ---------- alarm: saatli işlerde uygulamanın kendi alarmı + Google Takvim ----------
+  // Uygulama açıkken ya da arkadayken çalar (ses, titreşim, bildirim). Kapalıyken çalamaz: o yüzden her alarm Google Takvim'e de eklenir.
+  function alarmAt(t){ if(!t.time || t.doneAt) return null; var d=dOf(t.date), hm=t.time.split(':'); d.setHours(+hm[0],+hm[1],0,0); return Math.max(d.getTime(), t.snooze||0); }
+  function askNotify(){ try{ if(window.Notification && Notification.permission==='default') Notification.requestPermission(); }catch(e){} }
+  function popSheet(cls, kids){ var o=el('div',{class:'sheet2 '+cls},[el('div',{class:'sbox'},kids)]); document.body.appendChild(o); return o; }
+  function alarmSet(t){
+    askNotify(); buzz();
+    var o = popSheet('', [el('h3',{text:'⏰ Alarm kuruldu'}), el('p',{text:t.title+' · '+whenLabel(t)}),
+      el('a',{class:'gcal',href:gcalUrl(t),target:'_blank',rel:'noopener',onclick:function(){ t.gcal=true; save(); o.remove(); render(true); }},[
+        el('span',{class:'ico'},[ic('calplus')]), el('span',{},[el('b',{text:"Google Takvim'e de ekle"}), el('small',{text:'Uygulama kapalıyken telefonu Google uyarır. Açılınca "Kaydet"e bas.'})])]),
+      el('button',{type:'button',text:'Tamam',onclick:function(){ o.remove(); }})]);
+    alarmTick();
+  }
+  var AC=null, beepT=null, ringing=null, alarmT=null;
+  function beep(){
+    try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume();
+      [0,0.25,0.5].forEach(function(dt){ var o=AC.createOscillator(), g=AC.createGain(); o.type='square'; o.frequency.value=880;
+        g.gain.setValueAtTime(0.0001,AC.currentTime+dt); g.gain.exponentialRampToValueAtTime(0.3,AC.currentTime+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+dt+0.2);
+        o.connect(g); g.connect(AC.destination); o.start(AC.currentTime+dt); o.stop(AC.currentTime+dt+0.22); });
+    }catch(e){}
+    try{ navigator.vibrate && navigator.vibrate([400,200,400,200,400]); }catch(e){}
+  }
+  function stopRing(){ clearInterval(beepT); beepT=null; if(ringing){ ringing.remove(); ringing=null; } try{ navigator.vibrate && navigator.vibrate(0); }catch(e){} }
+  function ringAlarm(t){
+    if(ringing) return; t.alarmed=true; save();
+    var late = Date.now()-alarmAt(t) > 5*6e4;
+    try{ if(window.Notification && Notification.permission==='granted' && navigator.serviceWorker)
+      navigator.serviceWorker.ready.then(function(r){ r.showNotification('⏰ '+t.title,{body:whenLabel(t)+(late?' · geçti':''),tag:'alarm-'+t.id,renotify:true,requireInteraction:true,vibrate:[400,200,400,200,400],icon:'icon-192.png'}); }); }catch(e){}
+    beep(); var n=0; beepT=setInterval(function(){ if(++n>=30) return stopRing(); beep(); },2000);
+    ringing = popSheet('alarmring',[el('div',{class:'bell',text:'⏰'}), el('h3',{text:t.title}), el('p',{text:whenLabel(t)+(late?' · geçti':'')}),
+      el('div',{class:'row2'},[
+        el('button',{type:'button',text:'10 dk ertele',onclick:function(){ t.snooze=Date.now()+10*6e4; t.alarmed=false; save(); stopRing(); alarmTick(); }}),
+        el('button',{type:'button',class:'primary',text:'Tamam',onclick:function(){ stopRing(); render(true); alarmTick(); }})])]);
+  }
+  function alarmTick(){
+    clearTimeout(alarmT); var now=Date.now(), next=null;
+    S.tasks.forEach(function(t){ var at=alarmAt(t); if(at===null || t.alarmed) return;
+      if(at<=now){ if(now-at < 60*6e4 && !ringing) ringAlarm(t); else if(now-at >= 60*6e4){ t.alarmed=true; } }
+      else if(next===null || at<next) next=at; });
+    if(next!==null) alarmT=setTimeout(alarmTick, Math.min(next-now+500, 30000));
+    else alarmT=setTimeout(alarmTick, 30000);
+  }
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) alarmTick(); });
 
   function flash(msg, sub){
     document.getElementById('toastMsg').textContent=msg; document.getElementById('toastPts').textContent=sub||'';
@@ -1629,6 +1684,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         render(true); }}));
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Görünüm'})]), tseg);
+    var perm = window.Notification ? Notification.permission : 'yok';
+    app.append(el('div',{class:'label'},[el('span',{text:'Alarm'})]),
+      el('div',{class:'backup'},[
+        el('button',{type:'button',text: perm==='granted' ? 'Bildirim açık ✓' : 'Bildirime izin ver',onclick:function(){ if(window.Notification) Notification.requestPermission().then(function(){ render(true); }); }}),
+        el('button',{type:'button',text:'Alarmı dene',onclick:function(){ ringAlarm({id:'deneme',title:'Deneme alarmı',date:today(),time:nowHM()}); }})]),
+      el('p',{class:'note',text:'Saatli işlerde uygulama açıkken ya da arkadayken alarm çalar. Uygulama tamamen kapalıysa çalamaz; bunun için her alarmı Google Takvim\'e de ekle.'}));
     app.append(el('div',{class:'label'},[el('span',{text:'Yedek'})]),
       el('div',{class:'backup'},[
         el('button',{type:'button',text:'Yedek al',onclick:backupOut}),
@@ -1818,7 +1879,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       if(need) setTimeout(function(){ askForAmount(need[0], need[1]); }, 700);
       return; }
     var w=parseWhen(t);
-    if(w){ var nt=addTask(w); mark(S.activeDays); inp.value=''; save(); flash('Takvime eklendi · '+nt.title, whenLabel(nt)); render(); return; }
+    if(w){ var nt=addTask(w); mark(S.activeDays); inp.value=''; save(); render(); if(nt.time) alarmSet(nt); else flash('Takvime eklendi · '+nt.title, whenLabel(nt)); return; }
     S.items.push({id:'i'+Date.now(),text:t,created:Date.now(),heading:null,suggested:suggest(t),done:false,doneAt:null});
     mark(S.activeDays); inp.value=''; save();
     var n=S.items.filter(function(i){return !i.heading}).length;
@@ -1897,6 +1958,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 
   if(location.hash==='#pazar'){ view={name:'review'}; history.replaceState(null,'',location.pathname); }
   render();
+  alarmTick();
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
 </script>
