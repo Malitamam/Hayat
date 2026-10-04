@@ -329,7 +329,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .cbars{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
 .cbar{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px;font-size:13.5px}
 .cbar b{font-weight:600;font-variant-numeric:tabular-nums}
-.cbar .bar i{background:var(--late)}
+.cbar .bar i{background:var(--house)}
+.app > .msum{background:var(--hero);border:1px solid var(--line);border-radius:20px;padding:6px;gap:0}
+.app > .msum div{background:transparent;border:0;border-radius:0;padding:10px 10px}
+.app > .msum div + div{border-left:1px solid var(--line)}
+.app > .msum b{font-size:clamp(14px,4.2vw,19px)}
+.list + .note{margin:8px 2px 0}
 .seg.seg3{grid-template-columns:1fr 1fr 1fr}
 .mrowin{display:grid;grid-template-columns:110px 1fr;gap:8px}
 .mrowin input{min-width:0}
