@@ -330,6 +330,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .mrowin input{min-width:0}
 .mrow b{flex:none;font-variant-numeric:tabular-nums;font-weight:700}
 .mrow.gider b{color:var(--late)} .mrow.gelir b{color:var(--leaf)} .mrow.yatirim b{color:var(--house)}
+.row.fix .paybtn{flex:none;background:var(--house-tint);color:var(--house);border-radius:12px;padding:10px 14px;font-weight:600;font-size:14px}
+.fixform{display:flex;gap:8px;padding:8px 14px 12px;border-top:1px solid var(--line)}
+.fixform input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:14px;min-height:48px;padding:0 14px;font:inherit;background:var(--paper);color:var(--ink)}
+.fixform .primary{min-height:48px}
+.fixline{display:flex;align-items:center;gap:8px;border:0;background:var(--paper);border-radius:12px;padding:8px 10px;font:inherit;font-size:13px;color:var(--ink-2);text-align:left;min-height:40px}
+.fixline svg{width:16px;height:16px;flex:none;color:var(--sun-deep)}
 [hidden]{display:none!important}
 
 /* ders görüntüleyici (tam ekran, hep koyu) */
@@ -459,6 +465,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(!Array.isArray(S.logs)) S.logs = [];
     if(!Array.isArray(S.money)) S.money = [];
     if(!Array.isArray(S.trackers)) S.trackers = TRACK0();
+    if(!Array.isArray(S.fixed)) S.fixed = FIX0();
     // eski sürüm: Alışveriş'e ayrılmış kayıtları ürün listesine çevir
     S.items.filter(function(i){return i.heading==='alisveris'}).forEach(function(i){ addProducts(i.text); });
     S.items = S.items.filter(function(i){return i.heading!=='alisveris'});
@@ -483,6 +490,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return names.length;
   }
   load(lsGet());
+  if(!Array.isArray(S.fixed)) S.fixed = FIX0();
   if(!Array.isArray(S.trackers)){ S.trackers = TRACK0(); S.logs = S.logs||[]; S.money = S.money||[]; }
 
 
@@ -1072,6 +1080,15 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     {id:'market',name:'Alışveriş günü',ic:'cart',cat:'Market',keys:['alışverişe','alışveriş yaptım','markete','süpermarkete']}
   ]; }
   var MTYPE = {gider:'Gider', gelir:'Gelir', yatirim:'Yatırım'};
+  // ---------- sabit giderler: her ay bir tuş ----------
+  function FIX0(){ return [{id:'f-kira',name:'Kira',amount:null,cat:'Ev'},{id:'f-internet',name:'İnternet',amount:null,cat:'Fatura'},
+    {id:'f-telefon',name:'Telefon',amount:null,cat:'Fatura'},{id:'f-sigorta',name:'Sigorta',amount:null,cat:'Fatura'}]; }
+  function paidFix(f, mk){ return S.money.find(function(m){ return m.fx===f.id && monthKey(m.date)===mk; }); }
+  function fixLeft(){ var mk=monthKey(today()); return S.fixed.filter(function(f){ return !paidFix(f,mk); }); }
+  function payFixed(f, amount, date){
+    S.money.push({id:uid('m'),type:'gider',amount:amount,cur:'€',cat:f.cat||'Diğer',note:f.name,fx:f.id,date:date||today(),created:Date.now()});
+    f.amount = amount; mark(S.activeDays);
+  }
   function uid(p){ return p+Date.now()+Math.random().toString(36).slice(2,5); }
   function money(n, cur){ return n.toLocaleString('de-DE',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})+' '+(cur||'€'); }
   function pastDate(s){
@@ -1132,13 +1149,22 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var tr = S.trackers.filter(function(t){ return t.keys.some(function(k){ return s.indexOf(k)>=0; }); });
     var mo = moneyOf(s.replace(/\s\d{1,2}\s*gün\s*önce/,' '), past, tr.some(function(t){ return t.id==='benzin'||t.id==='yikama'||t.id==='market'; }));
     if(!past && !mo) tr = [];
-    if(!tr.length && !mo) return null;
-    return {date:pastDate(s), tr:tr, mo:mo, cat: mo ? (tr.length && mo.type==='gider' ? (tr[0].cat||tr[0].name) : catOf(s, mo.type)) : null};
+    var fx = (past || /\s(ödendi|ödeme)\s/.test(s)) && /\s(ödedim|ödendi|yattı|gitti|verdim|ödeme|yatırdım)\s/.test(s) ? S.fixed.filter(function(f){ var w=f.name.toLocaleLowerCase('tr').split(/\s+/)[0]; return s.indexOf(w.length>5 ? w.slice(0,w.length-2) : w)>=0; }) : [];
+    if(fx.length) tr = tr.filter(function(t){ return false; });
+    if(!tr.length && !mo && !fx.length) return null;
+    return {fx:fx, date:pastDate(s), tr:tr, mo:mo, cat: mo ? (tr.length && mo.type==='gider' ? (tr[0].cat||tr[0].name) : catOf(s, mo.type)) : null};
   }
   function addLife(L, text){
     var said = [], note = text.replace(/^\s*mali[,:]?\s*/i,'').trim();
     L.made = [];
     L.tr.forEach(function(t){ var lg={id:uid('l'),tr:t.id,date:L.date,amount:(L.mo && L.tr.length===1 && L.mo.type==='gider') ? L.mo.amount : null,created:Date.now()}; S.logs.push(lg); L.made.push([t,lg]); said.push(t.name); });
+    var fxDone = false;
+    if(L.fx && L.fx.length){
+      L.fx.forEach(function(f){ var mk=monthKey(L.date); if(paidFix(f,mk)){ said.push(f.name+' zaten ödenmişti'); return; }
+        var a = L.mo ? L.mo.amount : f.amount; if(!a){ L.askFx = f; return; }
+        payFixed(f, a, L.date); said.push(f.name+' ödendi · '+money(a)); fxDone = true; });
+      if(fxDone && L.mo) L.mo = null;
+    }
     if(L.mo){ S.money.push({id:uid('m'),type:L.mo.type,amount:L.mo.amount,cur:L.mo.cur,cat:L.cat,note:note,date:L.date,created:Date.now()});
       said.push(MTYPE[L.mo.type]+' '+money(L.mo.amount, L.mo.cur)); }
     mark(S.activeDays);
@@ -1150,9 +1176,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var s = numWords(' '+t.toLocaleLowerCase('tr').replace(/[,.!?]/g,function(c){return c===','?',':' ';})+' ', true).replace(/(\d),(\d{1,2})(?!\d)/,'$1.$2');
     var m = s.match(/(\d+(?:\.\d{1,2})?)/); return m ? parseFloat(m[1]) : 0;
   }
-  function askForAmount(t, lg){
-    askAmt = {t:t, lg:lg};
-    sheet.hidden=false; document.getElementById('maliTitle').textContent = t.name+' ne kadardı?';
+  function askForAmount(t, lg, keep){
+    if(!keep) askAmt = {t:t, lg:lg};
+    sheet.hidden=false; document.getElementById('maliTitle').textContent = t.name+(t.keys ? ' ne kadardı?' : ' ne kadar?');
     var inp=document.getElementById('maliInput'); inp.value=''; inp.placeholder='60 euro';
     document.getElementById('saveNote').textContent='Tutarı söyle ya da yaz. Vazgeçersen sadece kayıt defterinde kalır.';
     setTimeout(function(){ inp.focus(); },60);
@@ -1226,6 +1252,44 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       el('p',{class:'note',text:'Mali yeni takibi adından tanır: “bugün spor yaptım” gibi.'}));
   }
 
+  function fixedBlock(mk){
+    var cur = mk===monthKey(today()), edit = !!view.fixEdit, box = el('div',{});
+    var head = el('div',{class:'label'},[el('span',{text:'Sabit giderler'}), el('button',{type:'button',text:edit?'Bitti':'Düzenle',onclick:function(){ view.fixEdit=!edit; view.fixAsk=null; render(true); }})]);
+    var list = el('div',{class:'list'});
+    S.fixed.forEach(function(f){
+      var pd = paidFix(f, mk), asking = view.fixAsk===f.id;
+      var sub = pd ? 'Ödendi · '+dOf(pd.date).getDate()+' '+AY_UZUN[dOf(pd.date).getMonth()]+' · '+money(pd.amount) : (f.amount ? money(f.amount)+' · her ay' : 'Tutar yok, ilk ödemede sorarım');
+      var row = el('button',{class:'row fix'+(pd?' done':''),type:'button',onclick:function(){
+        if(edit){ view.fixAsk = asking ? null : f.id; render(true); return; }
+        if(pd){ if(!confirm(f.name+' ödendi kaydı silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==pd}); save(); render(true); return; }
+        if(!cur){ flash('Geçmiş ay','Mali\'ye “geçen ay kirayı ödedim” de'); return; }
+        if(f.amount){ payFixed(f, f.amount); award(5, f.name+' ödendi'); save(); render(true); }
+        else { view.fixAsk = f.id; render(true); }
+      }},[el('span',{class:'box'}), el('span',{class:'tx'},[el('span',{class:'t',text:f.name}), el('small',{text:sub})]),
+        edit ? el('span',{class:'more'},[ic('edit')]) : (pd ? null : el('span',{class:'paybtn',text:'Ödedim'}))]);
+      list.append(row);
+      if(asking){
+        var inp = el('input',{type:'text',inputmode:'decimal',placeholder:'Tutar €','aria-label':f.name+' tutarı',value:f.amount?String(f.amount).replace('.',','):''});
+        var f2 = el('form',{class:'fixform',autocomplete:'off'},[inp, el('button',{type:'submit',class:'primary',text: edit?'Kaydet':'Ödendi'})]);
+        f2.addEventListener('submit',function(e){ e.preventDefault(); var a=parseFloat(inp.value.replace(',','.')); if(!(a>0)){ inp.focus(); return; }
+          if(edit){ f.amount=a; } else { payFixed(f,a); award(5, f.name+' ödendi · '+money(a)); }
+          view.fixAsk=null; save(); render(true); });
+        list.append(f2); setTimeout(function(){ inp.focus(); },50);
+      }
+      if(asking && edit) list.append(el('button',{class:'danger',type:'button',text:f.name+' sabit giderini sil',onclick:function(){
+        if(!confirm(f.name+' listeden silinsin mi? Eski ödemeler kalır.')) return; S.fixed=S.fixed.filter(function(x){return x!==f}); view.fixAsk=null; save(); render(true); }}));
+    });
+    if(!S.fixed.length) list.append(el('div',{class:'empty',text:'Sabit gider yok. Düzenle → ekle.'}));
+    box.append(head, list);
+    if(edit){
+      var nm = el('input',{type:'text',placeholder:'Yeni sabit gider, ör. Spor salonu','aria-label':'Sabit gider adı',maxlength:'24'});
+      var af = el('form',{class:'shopadd',autocomplete:'off'},[nm, el('button',{type:'submit',text:'Ekle'})]);
+      af.addEventListener('submit',function(e){ e.preventDefault(); var v=nm.value.trim(); if(!v) return;
+        var low=v.toLocaleLowerCase('tr'); S.fixed.push({id:uid('f'),name:v.charAt(0).toLocaleUpperCase('tr')+v.slice(1),amount:null,cat:catOf(' '+low+' ','gider')}); save(); render(true); });
+      box.append(af);
+    } else box.append(el('p',{class:'note',text:cur ? "Ödeyince “Ödedim”e bas ya da Mali'ye “kirayı ödedim” de. Ay başında hepsi yeniden ödenmedi olur." : 'Geçmiş aylar sadece görüntülenir.'}));
+    return box;
+  }
   function renderMoney(){
     var mk = view.mon || monthKey(today()), y=+mk.slice(0,4), mo=+mk.slice(5,7)-1;
     function go(n){ var d=new Date(y, mo+n, 1); view.mon = ymd(d).slice(0,7); render(true); }
@@ -1236,6 +1300,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('span',{class:'mid',style:'text-align:center',text:AY_UZUN[mo]+' '+y}),
         el('button',{type:'button','aria-label':'Sonraki ay',onclick:function(){go(1)}},[ic('right')])]),
       msum(mk));
+    app.append(fixedBlock(mk));
     var ms = S.money.filter(function(m){return monthKey(m.date)===mk}).sort(function(a,b){return b.date.localeCompare(a.date) || b.created-a.created});
     var cats = {}; ms.forEach(function(m){ if(m.type==='gider' && m.cur==='€') cats[m.cat]=(cats[m.cat]||0)+m.amount; });
     var ck = Object.keys(cats).sort(function(a,b){return cats[b]-cats[a]});
@@ -1314,7 +1379,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('button',{class:'plus',type:'button','aria-label':t.name+' bugün',onclick:function(){ logToday(t); }},[ic('plus'),'Bugün'])]));
     });
     // Para: bu ayın özeti
-    var now = new Date(), pm = el('div',{class:'big'},[head(el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), 'Gelir · Gider · Yatırım', AY_UZUN[now.getMonth()]+' özeti', function(){ view={name:'money'}; render(); }), msum(monthKey(today()))]);
+    var now = new Date(), pm = el('div',{class:'big'},[head(el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), 'Gelir · Gider · Yatırım', AY_UZUN[now.getMonth()]+' özeti', function(){ view={name:'money'}; render(); }), msum(monthKey(today())),
+      S.fixed.length ? el('button',{class:'fixline',type:'button',onclick:function(){ view={name:'money'}; render(); }},[ic(fixLeft().length ? 'alert' : 'tick'), el('span',{text: fixLeft().length ? 'Sabit gider: '+fixLeft().length+' ödenmedi ('+fixLeft().slice(0,2).map(function(f){return f.name}).join(', ')+(fixLeft().length>2?'…':'')+')' : 'Sabit giderlerin hepsi ödendi'})]) : null]);
     return [shop, lb, pm];
   }
 
@@ -1528,15 +1594,17 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var ask = askAmt;
     if(ask){
       var amt = parseAmount(t); closeMali(); inp.value='';
-      if(amt){ ask.lg.amount = amt; S.money.push({id:uid('m'),type:'gider',amount:amt,cur:'€',cat:ask.t.cat||'Diğer',note:ask.t.name,date:ask.lg.date,created:Date.now()});
+      if(amt && ask.fx){ payFixed(ask.fx, amt, ask.date); award(5, ask.fx.name+' ödendi · '+money(amt)); save(); render(); }
+      else if(amt){ ask.lg.amount = amt; S.money.push({id:uid('m'),type:'gider',amount:amt,cur:'€',cat:ask.t.cat||'Diğer',note:ask.t.name,date:ask.lg.date,created:Date.now()});
         award(2, ask.t.name+' gideri '+money(amt)); save(); render(); }
       else flash('Tutarı anlayamadım','Para sayfasından ekleyebilirsin');
       return;
     }
     var L=parseLife(t);
     closeMali();
-    if(L){ var said=addLife(L,t); inp.value=''; award(2, said || 'Kaydedildi'); save(); render();
-      var need = !L.mo && L.made.filter(function(x){ return x[0].id==='benzin' || x[0].id==='yikama'; })[0];
+    if(L){ var said=addLife(L,t); inp.value=''; if(/zaten ödenmişti/.test(said) && !/ödendi ·/.test(said) && !L.made.length) flash(said); else if(said) award(L.fx&&L.fx.length&&/ödendi ·/.test(said)?5:2, said); save(); render();
+      if(L.askFx){ setTimeout(function(){ askAmt={t:L.askFx,lg:null,fx:L.askFx,date:L.date}; askForAmount(L.askFx, null, true); }, 700); }
+      var need = !L.mo && !L.askFx && L.made.filter(function(x){ return x[0].id==='benzin' || x[0].id==='yikama'; })[0];
       if(need) setTimeout(function(){ askForAmount(need[0], need[1]); }, 700);
       return; }
     var w=parseWhen(t);
