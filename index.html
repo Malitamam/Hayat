@@ -115,6 +115,12 @@ button.stat b{color:var(--house)}
 .rtstep span{flex:1}
 .rtdel{border:0;background:transparent;color:var(--late);font-size:22px;width:36px;height:36px}
 .rtin{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg,transparent);color:var(--ink);border-radius:12px;padding:10px;font:inherit}
+.nsearch{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:12px 14px;font:inherit;margin-top:6px}
+.nrow{display:flex;align-items:center}
+.nrow .row{flex:1;min-width:0}
+.nrow + .nrow{border-top:1px solid var(--line)}
+.nstar{flex:none;width:48px;height:48px;border:0;background:transparent;color:var(--ink-2);font-size:22px}
+.nstar.on{color:var(--sun-deep)}
 .badgebox{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .badges{display:flex;gap:6px;overflow-x:auto}
 .bdg{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:6px 4px;border-radius:14px;background:var(--card);border:1px solid var(--line);opacity:.4}
@@ -506,7 +512,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.11.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.12.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -1830,6 +1836,22 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     });
     app.append(el('p',{class:'note',text:'Rutini bitirince +10 puan, görev zinciri de sayılır.'}));
   }
+  // ---------- Notlar: Fikir klasörü, arama + yıldız ----------
+  function renderNotes(items){
+    var q=(view.q||'').toLocaleLowerCase('tr').trim();
+    var inp=el('input',{class:'nsearch',type:'search',placeholder:'Notlarda ara',value:view.q||''});
+    inp.addEventListener('input',function(){ view.q=inp.value; render(true); var n=document.querySelector('.nsearch'); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } });
+    app.append(inp);
+    app.append(el('p',{class:'note',text:"Mali'ye “not: …” de, doğrudan buraya gelir. Yıldızlılar en üstte."}));
+    var shown=items.filter(function(i){ return !q || i.text.toLocaleLowerCase('tr').indexOf(q)>=0; });
+    shown.sort(function(a,b){ return (b.star?1:0)-(a.star?1:0) || (a.done?1:0)-(b.done?1:0) || b.created-a.created; });
+    var list=el('div',{class:'list'});
+    if(!shown.length) list.append(el('div',{class:'empty',text: q ? 'Bu kelimeyle not yok.' : 'Henüz not yok.'}));
+    shown.forEach(function(it){
+      list.append(el('div',{class:'nrow'},[itemRow(it,false), el('button',{class:'nstar'+(it.star?' on':''),type:'button','aria-label':it.star?'Yıldızı kaldır':'Yıldızla',text:it.star?'★':'☆',onclick:function(){ it.star=!it.star; buzz(); save(); render(true); }})]));
+    });
+    app.append(list);
+  }
   function renderHeading(h){
     if(!h){ view={name:'home'}; return render(); }
     if(h.id!=='yapilacak' && h.id!=='ingilizce') app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']));
@@ -1845,6 +1867,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     } else {
       var items = S.items.filter(function(i){return i.heading===h.id});
       app.append(el('div',{class:'headrow'},[hIco(h), el('h2',{text:h.name})]));
+      if(h.id==='fikir'){ renderNotes(items); return; }
       var list=el('div',{class:'list'});
       if(!items.length) list.append(el('div',{class:'empty',text:'Bu klasör boş. Havuzdan buraya kayıt ayırabilirsin.'}));
       items.filter(function(i){return !i.done}).concat(items.filter(function(i){return i.done})).forEach(function(it){ list.append(itemRow(it,false)); });
@@ -1952,6 +1975,10 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       else flash('Tutarı anlayamadım','Para sayfasından ekleyebilirsin');
       return;
     }
+    var nm=t.match(/^\s*(?:mali[,:]?\s*)?(not|fikir)\s*[:,]\s*(.+)$/i);
+    if(nm){ closeMali(); inp.value=''; var nx=nm[2].trim(); nx=nx.charAt(0).toLocaleUpperCase('tr')+nx.slice(1);
+      S.items.push({id:'i'+Date.now(),text:nx,created:Date.now(),heading:'fikir',suggested:null,done:false,doneAt:null});
+      mark(S.activeDays); save(); flash('Fikir klasörüne eklendi', ''); render(); return; }
     var L=parseLife(t);
     closeMali();
     if(L){ var said=addLife(L,t); inp.value=''; if(/zaten ödenmişti/.test(said) && !/ödendi ·/.test(said) && !L.made.length) flash(said); else if(said) award(L.fx&&L.fx.length&&/ödendi ·/.test(said)?5:2, said); save(); render();
