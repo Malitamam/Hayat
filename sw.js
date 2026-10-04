@@ -1,5 +1,5 @@
 // Önce internetten taze dosya, yoksa telefondaki kopya. Kayıtlar burada değil, telefonun hafızasında.
-const CACHE = 'hayat-v27';
+const CACHE = 'hayat-v28';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -10,7 +10,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(r => {
-      if (r.ok && new URL(e.request.url).origin === location.origin) {
+      const u = new URL(e.request.url), font = /^fonts\.(googleapis|gstatic)\.com$/.test(u.hostname);
+      // yazı tipleri de saklanır: internet yokken de aynı görünüm
+      if ((r.ok && u.origin === location.origin) || (font && (r.ok || r.type === 'opaque'))) {
         const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
       }
       return r;
