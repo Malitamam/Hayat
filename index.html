@@ -539,7 +539,41 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
   function idb(){ return new Promise(function(ok,no){ var r=indexedDB.open('hayat',1); r.onupgradeneeded=function(){ r.result.createObjectStore('files'); }; r.onsuccess=function(){ ok(r.result); }; r.onerror=function(){ no(r.error); }; }); }
   function idbGet(k){ return idb().then(function(db){ return new Promise(function(ok,no){ var q=db.transaction('files').objectStore('files').get(k); q.onsuccess=function(){ ok(q.result); }; q.onerror=function(){ no(q.error); }; }); }); }
   function idbPut(k,v){ return idb().then(function(db){ return new Promise(function(ok,no){ var tx=db.transaction('files','readwrite'); tx.objectStore('files').put(v,k); tx.oncomplete=function(){ ok(); }; tx.onerror=function(){ no(tx.error); }; }); }); }
+  // ZIP (sıkıştırmasız) ders paketi: dersler.json + görüntüler
+  function readZip(blob){
+    var tailLen=Math.min(blob.size, 66000);
+    return blob.slice(blob.size-tailLen).arrayBuffer().then(function(t){
+      var dv=new DataView(t), e=-1;
+      for(var i=t.byteLength-22;i>=0;i--){ if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } }
+      if(e<0) throw new Error('zip');
+      var cnt=dv.getUint16(e+10,true), cdSize=dv.getUint32(e+12,true), cdOff=dv.getUint32(e+16,true);
+      return blob.slice(cdOff, cdOff+cdSize).arrayBuffer().then(function(cd){
+        var c=new DataView(cd), p=0, ents=[], dec=new TextDecoder();
+        for(var k=0;k<cnt;k++){
+          if(c.getUint32(p,true)!==0x02014b50) throw new Error('zip');
+          var method=c.getUint16(p+10,true), size=c.getUint32(p+20,true), nl=c.getUint16(p+28,true), xl=c.getUint16(p+30,true), cl=c.getUint16(p+32,true), lo=c.getUint32(p+42,true);
+          if(method!==0) throw new Error('compressed');
+          ents.push({name:dec.decode(new Uint8Array(cd,p+46,nl)), lo:lo, size:size}); p+=46+nl+xl+cl;
+        }
+        return Promise.all(ents.map(function(en){ return blob.slice(en.lo, en.lo+30).arrayBuffer().then(function(h){
+          var hv=new DataView(h); en.off=en.lo+30+hv.getUint16(26,true)+hv.getUint16(28,true); return en; }); }));
+      }).then(function(ents){
+        var by={}; ents.forEach(function(en){ by[en.name]=en; });
+        var j=by['dersler.json']; if(!j) throw new Error('zip');
+        return blob.slice(j.off, j.off+j.size).text().then(function(txt){
+          var h=JSON.parse(txt);
+          h.weeks.forEach(function(w){ w.docs.forEach(function(d){ d.modules.concat(d.pages).forEach(function(x){ var en=by[x.img]; x.img=en?[en.off,en.size]:[0,0]; }); }); });
+          return {blob:blob, base:0, weeks:h.weeks};
+        });
+      });
+    });
+  }
   function readPack(blob){
+    return blob.slice(0,4).arrayBuffer().then(function(m){
+      var u=new Uint8Array(m); if(u[0]===0x50 && u[1]===0x4b) return readZip(blob);
+      return readPackOld(blob); });
+  }
+  function readPackOld(blob){
     return blob.slice(0,13).arrayBuffer().then(function(b){
       if(new TextDecoder().decode(new Uint8Array(b,0,9))!=='HAYATENG1') throw new Error('bad');
       var n=new DataView(b).getUint32(9,true);
@@ -598,10 +632,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--house);outline-
     fi.addEventListener('change',function(){
       var f=fi.files[0]; if(!f) return; box.textContent=''; box.append(el('div',{class:'empty',text:'Yükleniyor…'}));
       readPack(f).then(function(x){ return idbPut('eng', f).then(function(){ ENG=x; flash('Dersler yüklendi', x.weeks.length+' hafta'); render(); }); })
-        .catch(function(){ box.textContent=''; engImport(box,'Bu dosya ders paketi değil. "ingilizce-paketi.hayat" dosyasını seç.'); });
+        .catch(function(){ box.textContent=''; engImport(box,'Bu dosya ders paketi değil. "hayat-ingilizce-dersler.zip" dosyasını seç.'); });
     });
     box.append(el('div',{class:'room',style:'--tile:var(--r-en)'},[el('span',{class:'ico',text:'Aa'}), el('h2',{text:'Ders paketini bir kez yükle'}),
-      el('p',{text:'Dersler sadece bu telefonda saklanır, internete konmaz. Claude\'un sohbette gönderdiği "ingilizce-paketi.hayat" dosyasını telefona indir, sonra aşağıdan seç.'}),
+      el('p',{text:'Dersler sadece bu telefonda saklanır, internete konmaz. Claude\'un sohbette gönderdiği "hayat-ingilizce-dersler.zip" dosyasını telefona indir, sonra aşağıdan seç. Zip\'i açmana gerek yok.'}),
       err?el('p',{class:'warn',text:err}):null,
       el('button',{class:'primary linkbtn',type:'button',text:'Dosyayı seç',onclick:function(){ fi.click(); }}), fi]));
   }
