@@ -105,9 +105,18 @@ button.stat b{color:var(--house)}
 .chain b{display:flex;align-items:center;gap:6px;font-family:var(--display);font-weight:800;font-size:26px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .chain b svg{width:20px;height:20px;color:var(--sun-deep)}
 .chain span{font-size:12.5px;color:var(--ink-2);line-height:1.3}
+.badgebox{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.badges{display:flex;gap:6px;overflow-x:auto}
+.bdg{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:6px 4px;border-radius:14px;background:var(--card);border:1px solid var(--line);opacity:.4}
+.bdg.on{opacity:1;border-color:var(--sun-deep)}
+.bdg svg{width:16px;height:16px;color:var(--sun-deep)}
+.bdg b{font-size:14px;line-height:1.1}
+.bdg small{font-size:10.5px;color:var(--ink-2);white-space:nowrap}
+.bnote{font-size:12px;color:var(--ink-2)}
 .days7{display:flex;gap:3px}
 .days7 i{width:11px;height:11px;border-radius:3px;background:var(--track)}
 .days7 i.y{background:var(--leaf)}
+.days7 i.r{background:var(--sky,#9ec5e8)}
 .days7 i.t{background:transparent;box-shadow:inset 0 0 0 2px var(--leaf)}
 
 /* şeritler */
@@ -487,7 +496,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.5.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.10.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -577,16 +586,22 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 
   // ---------- yardımcılar ----------
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-  function streak(days){
+  // zincir: haftada 1 izin günü (kaçan tek gün zinciri koparmaz; 7 gün içinde ikinci kaçış koparır)
+  function chainOf(days){
     var set = {}; days.forEach(function(d){ set[d]=1; });
-    var n=0, d=new Date();
-    if(!set[today()]) d.setDate(d.getDate()-1);
-    while(true){
+    var n=0, rest={}, lastRest=-99, i=0, d=new Date();
+    if(!set[today()]){ d.setDate(d.getDate()-1); i=1; }
+    while(i<400){
       var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      if(!set[k]) break; n++; d.setDate(d.getDate()-1);
+      if(set[k]) n++;
+      else if(n>0 || i<=1){ if(i-lastRest<7) break; lastRest=i; rest[k]=1; }
+      else break;
+      d.setDate(d.getDate()-1); i++;
     }
-    return n;
+    if(!n) rest={};
+    return {n:n, rest:rest};
   }
+  function streak(days){ return chainOf(days).n; }
   function mark(arr){ var t=today(); if(arr.indexOf(t)<0) arr.push(t); }
   function el(tag, attrs, kids){
     var e=document.createElement(tag);
@@ -1221,10 +1236,25 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     tx.textContent=done+'/'+total; s.appendChild(tx); return s;
   }
   function days7(arr){
-    var set={}; arr.forEach(function(d){set[d]=1;}); var w=el('span',{class:'days7','aria-hidden':'true'});
+    var set={}; arr.forEach(function(d){set[d]=1;}); var rest=chainOf(arr).rest, w=el('span',{class:'days7','aria-hidden':'true'});
     for(var i=6;i>=0;i--){ var d=new Date(); d.setDate(d.getDate()-i); var k=ymd(d);
-      w.append(el('i',{class: set[k] ? 'y' : (i===0 ? 't' : '')})); }
+      w.append(el('i',{class: set[k] ? 'y' : rest[k] ? 'r' : (i===0 ? 't' : '')})); }
     return w;
+  }
+  // rozetler: en uzun zincire göre (görev veya kayıt), bir kez kazanılır, kaybolmaz
+  var BADGES=[[3,'Kıvılcım'],[7,'Bir hafta'],[14,'İki hafta'],[30,'Bir ay'],[60,'İki ay'],[100,'Yüz gün']];
+  function badgeRow(){
+    var a=streak(S.doneDays), b=streak(S.activeDays), cur=Math.max(a,b), best=Math.max(S.best||0,cur);
+    if(best>(S.best||0)){
+      var won=BADGES.filter(function(x){ return x[0]>(S.best||0) && x[0]<=best; }).pop();
+      S.best=best; save();
+      if(won) setTimeout(function(){ flash('Yeni rozet: '+won[1], won[0]+' gün zincir'); },300);
+    }
+    var row=el('div',{class:'badges'});
+    BADGES.forEach(function(x){ var on=best>=x[0];
+      row.append(el('span',{class:'bdg'+(on?' on':''),title:x[0]+' gün'},[ic('flame'), el('b',{text:String(x[0])}), el('small',{text:x[1]})])); });
+    var note = !cur && best ? 'Zincir koptu, dert değil. Bugün bir görev bitir, yeniden başla.' : 'Haftada 1 gün izin hakkın var, zincir kopmaz.';
+    return el('div',{class:'badgebox'},[row, el('small',{class:'bnote',text:note})]);
   }
   function roomTiles(){
     var g=el('div',{class:'rooms'});
@@ -1648,6 +1678,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(el('div',{class:'chains'},[
       el('div',{class:'chain'},[el('b',{},[ic('flame'), String(streak(S.doneDays))]), el('span',{text:'gün görev bitirdim'}), days7(S.doneDays)]),
       el('div',{class:'chain'},[el('b',{},[ic('flame'), String(streak(S.activeDays))]), el('span',{text:"gün Mali'ye kayıt yaptım"}), days7(S.activeDays)])]));
+    app.append(badgeRow());
     app.append(el('div',{class:'label'},[el('span',{text:'Odalarım'}), el('button',{type:'button',text:'Tümü',onclick:function(){view={name:'rooms'};render();}})]));
     app.append(roomTiles());
     app.append(el('div',{class:'label'},[el('span',{text:'Klasörler'})]));
