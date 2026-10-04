@@ -171,6 +171,10 @@ button.stat b{color:var(--house)}
 .pi .sugg svg{width:14px;height:14px;color:var(--sun-deep)}
 .folders{display:flex;flex-wrap:wrap;gap:6px}
 .folders button{border:1.5px solid var(--line);background:transparent;border-radius:99px;min-height:40px;padding:0 14px;font-size:14px;color:var(--ink)}
+.folders button[style]{display:inline-flex;align-items:center;gap:8px}
+.folders button[style]::before{content:"";width:8px;height:8px;border-radius:99px;background:var(--hue)}
+.pi .primary{background:var(--house-tint);color:var(--house);border:1px solid color-mix(in srgb,var(--house) 35%,transparent);display:flex;align-items:center;justify-content:center;gap:8px}
+.pi q{font-weight:600;font-size:17.5px;line-height:1.35}
 .folders button.del{margin-left:auto;border-color:transparent;color:var(--ink-2);display:inline-flex;align-items:center;gap:4px;padding:0 10px}
 .folders button.del svg{width:18px;height:18px}
 
@@ -1568,8 +1572,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       var sug = it.suggested && cats.find(function(h){return h.id===it.suggested});
       card.append(el('q',{text:it.text}), el('small',{text:new Date(it.created).toLocaleString('tr-TR',{weekday:'short',hour:'2-digit',minute:'2-digit'})}));
       if(sug) card.append(el('span',{class:'sugg'},[ic('spark'), "Mali'nin önerisi"]),
-        el('button',{class:'primary',type:'button',text:dative(sug.name)+' taşı',onclick:function(){ move(sug); }}));
-      cats.filter(function(h){return h!==sug}).forEach(function(h){ f.append(el('button',{type:'button',text:h.name,onclick:function(){ move(h); }})); });
+        el('button',{class:'primary',type:'button',style:hue(sug),onclick:function(){ move(sug); }},[ic('spark'), dative(sug.name)+' taşı']));
+      cats.filter(function(h){return h!==sug}).forEach(function(h){ f.append(el('button',{type:'button',style:hue(h),text:h.name,onclick:function(){ move(h); }})); });
       f.append(el('button',{type:'button',class:'del','aria-label':'Sil',onclick:function(){ S.items=S.items.filter(function(x){return x!==it}); save(); render(); }},[ic('trash')]));
       card.append(f);
       list.append(card);
