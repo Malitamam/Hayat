@@ -475,12 +475,30 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   var app = document.getElementById('app');
 
   // ---------- kayıt: sadece bu telefonda ----------
-    function lsGet(){ try{ var s = localStorage.getItem('hayat-state'); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
-  function lsSet(){ try{ localStorage.setItem('hayat-state', JSON.stringify(S)); }catch(e){} }
+  var LOCKED = false;   // kayıt okunamazsa üstüne yazma
+  function lsGet(){
+    var s=null;
+    try{ s = localStorage.getItem('hayat-state'); }catch(e){ return null; }
+    if(!s) return null;
+    try{ var o=JSON.parse(s); if(o && o.v===1) return o; }catch(e){}
+    LOCKED = true; return null;
+  }
+  var lastCopy = 0;
+  function lsSet(){
+    if(LOCKED) return;
+    try{
+      var cur = localStorage.getItem('hayat-state');
+      if(cur && Date.now()-lastCopy > 600000){ localStorage.setItem('hayat-state-prev', cur); lastCopy = Date.now(); }
+      localStorage.setItem('hayat-state', JSON.stringify(S));
+    }catch(e){}
+  }
   function save(){ lsSet(); }
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
   function load(obj){
     if(!obj || obj.v !== 1) return;
+    LOCKED = false;
     S = obj;
+    Object.keys(DEFAULT).forEach(function(k){ if(S[k]===undefined || (Array.isArray(DEFAULT[k]) && !Array.isArray(S[k]))) S[k] = JSON.parse(JSON.stringify(DEFAULT[k])); });
     if(!Array.isArray(S.shop)) S.shop = [];
     if(!Array.isArray(S.tasks)) S.tasks = [];
     if(!Array.isArray(S.logs)) S.logs = [];
@@ -512,6 +530,11 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return names.length;
   }
   load(lsGet());
+  if(LOCKED){
+    var pv=null; try{ pv=JSON.parse(localStorage.getItem('hayat-state-prev')); }catch(e){}
+    if(pv && pv.v===1 && confirm('Kayıtların okunamadı. Bir önceki kopya bulundu, geri yüklensin mi?\n(İptal dersen hiçbir şey silinmez, uygulama yeni kayıt yapmadan açılır.)')){ load(pv); save(); }
+  }
+  if(!S.lastBackup && !LOCKED) S.lastBackup = today();
   if(!Array.isArray(S.fixed)) S.fixed = FIX0();
   if(!Array.isArray(S.people)) S.people = PEOPLE0();
   if(!Array.isArray(S.trackers)){ S.trackers = TRACK0(); S.logs = S.logs||[]; S.money = S.money||[]; }
@@ -1484,6 +1507,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(el('div',{class:'top'},[
       el('div',{},[el('div',{class:'date',text:GUN_UZUN[now.getDay()]+', '+now.getDate()+' '+AY_UZUN[now.getMonth()]}), el('h1',{text:'Bugün'})]),
       el('span',{class:'pts',id:'pts','aria-label':S.points+' puan'},[ic('star'), el('span',{text:String(S.points)})])]));
+    if(LOCKED) app.append(el('p',{class:'note',text:'Kayıtların okunamadı; güvenlik için yeni kayıt yapılmıyor. Odalar > Yedeği yükle ile geri dön.'}));
+    else if(S.lastBackup && (Date.now()-new Date(S.lastBackup+'T12:00:00').getTime())>7*864e5) app.append(el('button',{class:'review',type:'button',onclick:function(){backupOut();render();}},[
+      el('b',{text:'Yedek zamanı'}), el('small',{text:'7 gündür yedek almadın · dosyayı Drive\'ına kaydet'}), el('span',{class:'go',text:'Al'})]));
     if(reviewDue()) app.append(el('button',{class:'review',type:'button',onclick:function(){view={name:'review'};render();}},[
       el('b',{text:'Haftan nasıl geçti?'}), el('small',{text:'1 dakikalık Pazar geri bakışı · +20 puan'}), el('span',{class:'go',text:'Aç'})]));
     var EK={1:"'i",2:"'si",3:"'ü"};
@@ -1551,6 +1577,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
 
   function backupOut(){
+    S.lastBackup = today(); save();
     var blob=new Blob([JSON.stringify(Object.assign({app:APP_VERSION, exportedAt:new Date().toISOString()}, S),null,1)],{type:'application/json'});
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hayat-yedek-'+today()+'.json';
     document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1000);
