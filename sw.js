@@ -1,5 +1,5 @@
 // Önce internetten taze dosya, yoksa telefondaki kopya. Kayıtlar burada değil, telefonun hafızasında.
-const CACHE = 'hayat-v30';
+const CACHE = 'hayat-v31';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -18,4 +18,9 @@ self.addEventListener('fetch', e => {
       return r;
     }).catch(() => caches.match(e.request).then(m => m || caches.match('index.html')))
   );
+});
+// alarm bildirimine dokununca uygulama öne gelir
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => cs.length ? cs[0].focus() : self.clients.openWindow('./')));
 });
