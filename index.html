@@ -1166,7 +1166,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return ymd(d);
   }
   function catOf(s, type){
-    if(type==='gelir') return /maaş/.test(s) ? 'Maaş' : 'Diğer gelir';
+    if(type==='gelir') return /(çocuk yardım|kindergeld|çocuk parası)/.test(s) ? 'Çocuk yardımı' : /(kiracı|kiradan|kira gelir)/.test(s) ? 'Kira geliri' : /(borsa|hisse|temettü|kâr payı|etf|fon|faiz)/.test(s) ? 'Borsa geliri' : /maaş/.test(s) ? 'Maaş' : 'Diğer gelir';
     if(type==='yatirim') return /altın/.test(s) ? 'Altın' : /(kripto|bitcoin)/.test(s) ? 'Kripto' : /(hisse|etf|fon|borsa)/.test(s) ? 'Borsa' : 'Birikim';
     var C = [['Market',/(market|lidl|aldi|rewe|edeka|penny|netto|kaufland|\sdm\s|bakkal)/],['Araba',/(araba|benzin|otopark|tamir|lastik|yağ değişimi|park)/],
       ['Ev',/(kira|aidat|ev\s)/],['Fatura',/(fatura|elektrik|internet|telefon|doğalgaz|sigorta)/],['Yemek',/(restoran|yemek|kahve|döner|pizza|kafe)/],
@@ -1177,7 +1177,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   var CUR = "(€|euro|avro|eur(?=\\s)|lira|tl(?=\\s)|₺)";
   function moneyOf(s, past, costly){
     var inv = /(yatırım|hisse|\sfon|etf|altın|kripto|bitcoin|borsa|birikim)/.test(s);
-    var inc = /(maaş|gelir|kazandım|prim|ikramiye|iade)/.test(s);
+    var inc = /(maaş|gelir|kazandım|prim|ikramiye|iade|yardım|kindergeld|temettü|kiracı|kiradan)/.test(s);
+    if(inv && /(temettü|kâr payı|gelir|kazandım|geldi|yattı)/.test(s)){ inv = false; inc = true; }
     var noun = /\s(gider|gelir|harcama|yatırım)\s/.test(s);
     if(!past && !noun) return null;
     var m = s.match(new RegExp("(\\d+(?:[.,]\\d{1,2})?)\\s*"+CUR)) ||
@@ -1319,16 +1320,21 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       el('p',{class:'note',text:'Mali yeni takibi adından tanır: “bugün spor yaptım” gibi.'}));
   }
 
+  var SRC = ['Benim maaşım','Eşimin maaşı','Çocuk yardımı','Borsa geliri','Kira geliri','Diğer gelir'];
+  function srcOf(m){
+    if(m.cat==='Maaş') return m.who==='es' ? 'Eşimin maaşı' : 'Benim maaşım';
+    return SRC.indexOf(m.cat)>=0 ? m.cat : 'Diğer gelir';
+  }
   function householdBlock(mk){
     var inc = S.money.filter(function(m){ return m.type==='gelir' && m.cur==='€' && monthKey(m.date)===mk; });
     if(!inc.length) return el('div',{});
     var tot = inc.reduce(function(a,m){return a+m.amount},0), box = el('div',{});
     box.append(el('div',{class:'label'},[el('span',{text:'Hane geliri'}), el('b',{class:'hh',text:money(tot)})]));
     var cb = el('div',{class:'cbars hhbars'});
-    S.people.forEach(function(pp){
-      var v = inc.filter(function(m){ return (m.who||'ben')===pp.id; }).reduce(function(a,m){return a+m.amount},0);
+    SRC.forEach(function(nm){
+      var v = inc.filter(function(m){ return srcOf(m)===nm; }).reduce(function(a,m){return a+m.amount},0);
       if(!v) return;
-      cb.append(el('div',{class:'cbar'},[el('span',{text:pp.name}), el('div',{class:'bar'},[el('i',{style:'width:'+Math.max(4,Math.round(v/tot*100))+'%'})]), el('b',{text:money(v)})]));
+      cb.append(el('div',{class:'cbar'},[el('span',{text:nm}), el('div',{class:'bar'},[el('i',{style:'width:'+Math.max(4,Math.round(v/tot*100))+'%'})]), el('b',{text:money(v)})]));
     });
     box.append(cb); return box;
   }
@@ -1394,9 +1400,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var type = 'gider', seg = el('div',{class:'seg seg3'});
     Object.keys(MTYPE).forEach(function(k){ var b=el('button',{type:'button',class:k===type?'on':'',text:MTYPE[k]});
       b.onclick=function(){ type=k; seg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }; seg.append(b); });
-    var who = 'ben', whoSeg = el('div',{class:'seg',style:'grid-template-columns:repeat('+S.people.length+',1fr)',hidden:''});
-    S.people.forEach(function(pp){ var b=el('button',{type:'button',class:pp.id===who?'on':'',text:pp.name+"'in geliri"});
-      b.onclick=function(){ who=pp.id; whoSeg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }; whoSeg.append(b); });
+    var src = SRC[0], whoSeg = el('div',{class:'seg',style:'grid-template-columns:repeat(2,1fr)',hidden:''});
+    SRC.forEach(function(nm){ var b=el('button',{type:'button',class:nm===src?'on':'',text:nm});
+      b.onclick=function(){ src=nm; whoSeg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }; whoSeg.append(b); });
     seg.querySelectorAll('button').forEach(function(b,i){ var k=Object.keys(MTYPE)[i], old=b.onclick; b.onclick=function(){ old(); whoSeg.hidden = (k!=='gelir'); }; });
     var amt = el('input',{type:'text',inputmode:'decimal',placeholder:'Tutar €','aria-label':'Tutar',id:'mAmt'});
     var nt = el('input',{type:'text',placeholder:'Ne için? ör. market','aria-label':'Not',id:'mNote'});
@@ -1404,7 +1410,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     f.addEventListener('submit',function(e){
       e.preventDefault(); var a=parseFloat(amt.value.replace(',','.')); if(!(a>0)){ amt.focus(); return; }
       var n=nt.value.trim(), s=' '+n.toLocaleLowerCase('tr')+' ';
-      S.money.push({id:uid('m'),type:type,amount:a,cur:'€',cat:catOf(s,type),note:n||MTYPE[type],who:type==='gelir'?who:undefined,date:mk===monthKey(today())?today():mk+'-01',created:Date.now()});
+      S.money.push({id:uid('m'),type:type,amount:a,cur:'€',cat:type==='gelir' ? (/maaş/i.test(src) ? 'Maaş' : src) : catOf(s,type),note:n||MTYPE[type],who:type==='gelir'&&/maaş/i.test(src)?(src==='Eşimin maaşı'?'es':'ben'):undefined,date:mk===monthKey(today())?today():mk+'-01',created:Date.now()});
       mark(S.activeDays); award(2, MTYPE[type]+' kaydedildi'); save(); render(true);
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Elle ekle'})]), f);
@@ -1413,7 +1419,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     ms.forEach(function(m){
       var d = dOf(m.date);
       list.append(el('button',{class:'row mrow '+m.type,type:'button',onclick:function(){ if(!confirm('“'+m.note+'” silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==m}); save(); render(true); }},[
-        el('span',{class:'tx'},[el('span',{class:'t',text:m.note}), el('small',{text:d.getDate()+' '+AY_UZUN[d.getMonth()]+' · '+MTYPE[m.type]+(m.type==='gelir' ? ' · '+personName(m.who||'ben') : '')+' · '+m.cat})]),
+        el('span',{class:'tx'},[el('span',{class:'t',text:m.note}), el('small',{text:d.getDate()+' '+AY_UZUN[d.getMonth()]+' · '+MTYPE[m.type]+(m.type==='gelir' ? ' · '+srcOf(m) : '')+' · '+m.cat})]),
         el('b',{text:(m.type==='gider'?'−':'+')+money(m.amount, m.cur)})]));
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Bu ayın kayıtları'})]), list,
