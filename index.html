@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A1316">
+<script>try{if(localStorage.getItem('hayat-theme')==='light'){document.documentElement.dataset.theme='light';document.querySelector('meta[name="theme-color"]').content='#F4F6F5';}}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -116,7 +117,7 @@ button.stat b{color:var(--house)}
 .nudge .tx b{display:block;font-size:15px}
 .nudge .tx small{font-size:12.5px;color:var(--ink-2)}
 .poolbar span:last-child,.nudge .go{background:var(--house);color:var(--on-house);border-radius:12px;padding:8px 14px;font-weight:600;font-size:14px}
-.latebar{background:var(--late-tint);color:var(--late);font-weight:600;font-size:14.5px}
+.latebar{background:var(--card);border:1px solid color-mix(in srgb,var(--late) 45%,var(--line));color:var(--late);font-weight:600;font-size:14.5px}
 .latebar span:first-child{flex:1}
 .latebar svg{width:18px;height:18px}
 
@@ -145,6 +146,7 @@ button.stat b{color:var(--house)}
 .row .ico{margin:0}
 
 /* tuşlar */
+.primary.soft{background:var(--house-tint);color:var(--house)}
 .primary{border:0;border-radius:14px;background:var(--house);color:var(--on-house);font-weight:600;min-height:48px;padding:0 16px}
 .danger{border:0;border-radius:14px;background:transparent;color:var(--late);font-weight:600;min-height:44px;padding:0 12px}
 .back{align-self:flex-start;border:0;background:transparent;color:var(--house);border-radius:12px;padding:8px 4px;min-height:44px;font-weight:600;display:inline-flex;align-items:center;gap:2px;margin-bottom:-8px}
@@ -217,7 +219,7 @@ button.stat b{color:var(--house)}
 .dh em{margin-left:auto;font-style:normal;font-size:13px;font-weight:700;color:var(--house)}
 .day.today .dh b{color:var(--house)}
 .emptyday{font-size:13.5px;color:var(--ink-2);padding-left:2px}
-details.late{background:var(--late-tint);border-radius:18px;overflow:hidden}
+details.late{background:var(--card);border:1px solid color-mix(in srgb,var(--late) 45%,var(--line));border-radius:18px;overflow:hidden}
 details.late summary{list-style:none;display:flex;align-items:center;gap:10px;padding:0 14px;min-height:52px;color:var(--late);font-weight:600;font-size:14.5px;cursor:pointer}
 details.late summary::-webkit-details-marker{display:none}
 details.late summary svg{width:18px;height:18px}
@@ -1516,13 +1518,22 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       var n=hCount(h);
       l.append(el('button',{class:'row',type:'button',onclick:function(){view={name:'heading',id:h.id};render();}},[hIco(h), el('span',{class:'t',text:h.name}), el('small',{text:n?String(n):''}), ic('right')]));
     });
-    app.append(l, el('button',{class:'primary',type:'button',text:'Yeni oda ya da klasör ekle',onclick:function(){view={name:'add'};render();}}));
+    app.append(l, el('button',{class:'primary soft',type:'button',text:'Yeni oda ya da klasör ekle',onclick:function(){view={name:'add'};render();}}));
     app.append(el('div',{class:'label'},[el('span',{text:'Takip'})]),
       el('div',{class:'list'},[
         el('button',{class:'row',type:'button',onclick:function(){view={name:'logbook'};render();}},[el('span',{class:'ico',style:'--hue:var(--c-plan)'},[ic('log')]), el('span',{class:'t',text:'Kayıt defteri'}), ic('right')]),
         el('button',{class:'row',type:'button',onclick:function(){view={name:'money'};render();}},[el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), el('span',{class:'t',text:'Gelir · Gider · Yatırım'}), ic('right')])]));
     app.append(el('div',{class:'label'},[el('span',{text:'Hafta'})]),
       el('div',{class:'list'},[el('button',{class:'row',type:'button',onclick:function(){view={name:'review'};render();}},[el('span',{class:'ico',style:'--hue:var(--house)'},[ic('star')]), el('span',{class:'t',text:'Pazar geri bakışı'}), ic('right')])]));
+    var th = document.documentElement.dataset.theme==='light' ? 'light' : 'dark', tseg = el('div',{class:'seg'});
+    [['dark','Koyu'],['light','Açık']].forEach(function(o){
+      tseg.append(el('button',{type:'button',class:o[0]===th?'on':'',text:o[1],onclick:function(){
+        try{ localStorage.setItem('hayat-theme',o[0]); }catch(e){}
+        if(o[0]==='light') document.documentElement.dataset.theme='light'; else delete document.documentElement.dataset.theme;
+        document.querySelector('meta[name="theme-color"]').content = o[0]==='light' ? '#F4F6F5' : '#0A1316';
+        render(true); }}));
+    });
+    app.append(el('div',{class:'label'},[el('span',{text:'Görünüm'})]), tseg);
     app.append(el('div',{class:'label'},[el('span',{text:'Yedek'})]),
       el('div',{class:'backup'},[
         el('button',{type:'button',text:'Yedek al',onclick:backupOut}),
