@@ -62,7 +62,7 @@ p{margin:0}
 .hero small{font-size:13px;color:var(--ink-2);display:block;margin-top:2px}
 .level{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .level strong{color:var(--ink);font-weight:600}
-.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .stat{background:color-mix(in srgb,var(--paper) 55%,transparent);border:1px solid var(--line);border-radius:14px;padding:8px 10px;text-align:left;font:inherit;color:var(--ink);min-height:56px}
 .stat i{font-style:normal;font-size:11.5px;color:var(--ink-2);display:block}
 .stat b{font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
@@ -283,6 +283,29 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .tab{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;font-weight:500;color:var(--ink-2);position:relative;min-height:56px;padding:0}
 .tab svg{width:23px;height:23px}
 .tab[aria-current="page"]{color:var(--house);font-weight:700}
+.topact{display:flex;align-items:center;gap:6px}
+.iconbtn{position:relative;width:40px;height:40px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;padding:0}
+.iconbtn svg{width:20px;height:20px}
+.iconbtn .badge{position:absolute;top:-4px;right:-4px;background:var(--late);color:var(--card);font-size:11px;font-weight:700;border-radius:99px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+.wlabel{gap:6px}
+.wlabel > span{flex:1}
+.wnav{width:32px;height:32px;display:grid;place-items:center;padding:0;border:0;background:transparent;color:var(--ink)}
+.wnav svg{width:18px;height:18px}
+.wplan{display:flex;flex-direction:column;gap:4px}
+.wday{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;background:var(--card);border:1px solid var(--line);border-radius:14px;font:inherit;color:var(--ink);text-align:left;width:100%}
+.wday.we{background:color-mix(in srgb,var(--sun) 12%,var(--card));border-color:color-mix(in srgb,var(--sun) 35%,var(--line))}
+.wday.past{opacity:.55}
+.wday.today{box-shadow:inset 0 0 0 2px var(--house)}
+.wday.sel{border-color:var(--house)}
+.wday .wd{flex:none;width:34px;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.wday .wd span{font-size:11.5px;color:var(--ink-2)}
+.wday .wd b{font-size:17px;font-variant-numeric:tabular-nums}
+.wday.today .wd b{color:var(--house)}
+.wits{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}
+.wit{font-size:12px;line-height:1.2;padding:3px 7px;border-radius:8px;background:color-mix(in srgb,var(--house) 16%,transparent);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wit.done{text-decoration:line-through;opacity:.6}
+.wit.more{background:transparent;color:var(--ink-2)}
+.wnone{color:var(--ink-2)}
 .tab .badge{position:absolute;top:4px;left:calc(50% + 5px);background:var(--late);color:var(--card);font-size:10.5px;font-weight:700;border-radius:99px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
 .malibtn{width:66px;height:66px;border-radius:99px;border:4px solid var(--paper);background:var(--house);color:var(--on-house);display:grid;place-items:center;margin:-30px auto 0;box-shadow:0 6px 18px color-mix(in srgb,var(--house) 45%,transparent);transition:transform .15s}
 .malibtn:active{transform:scale(.94)}
@@ -450,14 +473,15 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
  <symbol id="i-fuel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M4 10h10M14 8h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3"/></symbol>
  <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
  <symbol id="i-cut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></symbol>
+ <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13v2"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 13.5h2"/></symbol>
  <symbol id="i-log" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
 </defs></svg>
 <nav class="tabs" aria-label="Ana menü"><div class="in">
-  <button class="tab" type="button" data-tab="home"><svg class="i"><use href="#i-home"/></svg>Bugün</button>
-  <button class="tab" type="button" data-tab="cal"><svg class="i"><use href="#i-cal"/></svg>Takvim</button>
+  <button class="tab" type="button" data-tab="home"><svg class="i"><use href="#i-home"/></svg>Genel</button>
+  <button class="tab" type="button" data-tab="fin"><svg class="i"><use href="#i-wallet"/></svg>Finans</button>
   <button class="malibtn" type="button" id="maliBtn" aria-label="Mali'ye söyle"><svg><use href="#i-mic"/></svg></button>
-  <button class="tab" type="button" data-tab="pool"><span class="badge" id="poolBadge" hidden></span><svg class="i"><use href="#i-inbox"/></svg>Havuz</button>
+  <button class="tab" type="button" data-tab="cal"><svg class="i"><use href="#i-cal"/></svg>Takvim</button>
   <button class="tab" type="button" data-tab="rooms"><svg class="i"><use href="#i-grid"/></svg>Odalar</button>
 </div></nav>
 <div class="sheetwrap" id="maliSheet" hidden>
@@ -512,7 +536,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.12.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.13.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -575,12 +599,17 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       var re = new RegExp("\\s"+nm+"(\\s+(alışveriş\\s+)?(listesine|listeye|listesi|listem)|"+suf+"\\s)");
       if(re.test(low)) return {id:S.lists[i].id, strip:new RegExp("(^|\\s)"+nm+"("+suf+"|\\s+(alışveriş\\s+)?(listesine|listeye|listesi|listem))(?=\\s|$)",'i')};
     }
+    // "amazondan kulaklık", "internetten pil sipariş et" → Online listesi
+    var on = S.lists.find(function(l){ return l.id==='online' || /^online$/i.test(l.name); });
+    if(on && /(^|\s)(amazon\S*|internetten|online\S*|sipariş)/.test(low)) return {id:on.id, strip:/(^|\s)(amazon\S*|internetten|online\S*|sipariş(\s+(et|ver))?)(?=\s|$)/gi};
     return null;
   }
   function shopOf(lid){ return S.shop.filter(function(x){ return (x.list||null)===(lid||null); }); }
   function addProducts(text, lid){
     var L = listOf(text);
     if(L){ lid = L.id; text = text.toLocaleLowerCase('tr').replace(L.strip,' ').replace(/\s+/g,' ').trim(); }
+    // "Lidl için yumurta", "Türk marketinden sucuk" → mağaza adı ürün adına girmez (Market listesi)
+    text = text.replace(/(^|\s)(lidl|aldi|rewe|edeka|penny|netto|kaufland|türk market\S*|markete?|marketten)('?(den|dan|ten|tan|ye|ya|e|a))?(\s+için)?(?=\s)/gi,' ').trim();
     var names = splitProducts(text);
     names.forEach(function(n,k){
       if(shopOf(lid).some(function(x){return !x.boughtAt && x.name.toLocaleLowerCase('tr')===n.toLocaleLowerCase('tr')})) return;
@@ -1082,7 +1111,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var sun = new Date(mon); sun.setDate(mon.getDate()+6);
     var thisWk = ymd(weekStart()), isNow = ymd(mon)===thisWk, isLast = ymd(mon)===ymd(new Date(weekStart().getFullYear(), weekStart().getMonth(), weekStart().getDate()-7));
     function go(n){ var d=new Date(mon); d.setDate(d.getDate()+7*n); view.wk=ymd(d); render(true); }
-    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']),
+    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Genel']),
       el('h2',{text: isNow ? 'Bu hafta' : isLast ? 'Geçen hafta' : 'Hafta raporu'}),
       el('div',{class:'nav'},[el('button',{type:'button','aria-label':'Önceki hafta',onclick:function(){go(-1)}},[ic('left')]),
         el('span',{class:'mid',style:'text-align:center',text:mon.getDate()+' '+AY_UZUN[mon.getMonth()]+' – '+sun.getDate()+' '+AY_UZUN[sun.getMonth()]}),
@@ -1228,20 +1257,21 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     else if(view.name==='logbook') renderLogbook();
     else if(view.name==='report') renderReport();
     else if(view.name==='money') renderMoney();
+    else if(view.name==='settings') renderSettings();
     updateTabs();
     window.scrollTo(0, keep ? y : 0);
   }
-  function tabOf(v){ if(v.name==='home'||v.name==='review'||v.name==='logbook'||v.name==='money'||v.name==='report') return 'home'; if(v.name==='pool') return 'pool';
+  function tabOf(v){ if(v.name==='money' || (v.name==='heading' && v.id==='alisveris')) return 'fin';
+    if(v.name==='home'||v.name==='review'||v.name==='logbook'||v.name==='report'||v.name==='pool'||v.name==='settings') return 'home';
     if((v.name==='heading' && v.id==='yapilacak') || v.name==='task') return 'cal'; return 'rooms'; }
   function updateTabs(){
     var cur=tabOf(view);
     document.querySelectorAll('.tab').forEach(function(b){ if(b.dataset.tab===cur) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
-    var n=S.items.filter(function(i){return !i.heading}).length, bd=document.getElementById('poolBadge');
-    bd.textContent=n; bd.hidden=!n;
+
   }
   document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click',function(){
     var t=b.dataset.tab; buzz();
-    view = t==='home' ? {name:'home'} : t==='cal' ? {name:'heading',id:'yapilacak'} : t==='pool' ? {name:'pool'} : {name:'rooms'};
+    view = t==='home' ? {name:'home'} : t==='cal' ? {name:'heading',id:'yapilacak'} : t==='fin' ? {name:'money'} : {name:'rooms'};
     render(); }); });
 
   function ring(done, total){
@@ -1277,7 +1307,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   function roomTiles(){
     var g=el('div',{class:'rooms'});
-    S.headings.filter(function(h){return h.type==='room'}).forEach(function(h){
+    // İngilizce ve boş oda şimdilik gizli (veri silinmez)
+    S.headings.filter(function(h){return h.type==='room' && h.id!=='ingilizce' && !h.empty}).forEach(function(h){
       var sub = h.empty ? 'Birlikte kuralım' : h.id==='ingilizce' ? 'Dersler' : h.id==='rutinler' ? rtSub() : 'Oda';
       g.append(el('button',{class:'rtile'+(h.empty?' ghost':''),type:'button',onclick:function(){buzz();view={name:'heading',id:h.id};render();}},[
         hIco(h), el('b',{text:h.empty?'Yeni oda':h.name}), el('small',{text:sub})]));
@@ -1459,7 +1490,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
 
   function renderLogbook(){
-    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']),
+    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Genel']),
       el('div',{class:'headrow'},[el('span',{class:'ico',style:'--hue:var(--c-plan)'},[ic('log')]), el('h2',{text:'Kayıt defteri'})]),
       el('p',{class:'note',style:'margin-top:-8px',text:"Mali'ye “dün benzin aldım 60 euro” de, ya da Bugün'e dokun. Her kayıt +2."}));
     var list = el('div',{class:'stack'});
@@ -1558,9 +1589,10 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   function renderMoney(){
     var mk = view.mon || monthKey(today()), y=+mk.slice(0,4), mo=+mk.slice(5,7)-1;
     function go(n){ var d=new Date(y, mo+n, 1); view.mon = ymd(d).slice(0,7); render(true); }
-    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']),
-      el('div',{class:'headrow'},[el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), el('h2',{text:'Para'})]),
-      el('p',{class:'note',style:'margin-top:-8px',text:"Gelir, gider ve yatırım. Mali'ye “markette 45 euro harcadım” de."}),
+    app.append(el('div',{class:'headrow'},[el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), el('h2',{text:'Finans'})]),
+      el('p',{class:'note',style:'margin-top:-8px',text:"Gelir, gider, yatırım, abonelik ve alışveriş. Mali'ye “markette 45 euro harcadım” de."}));
+    app.append(shopTile());
+    app.append(
       el('div',{class:'nav'},[el('button',{type:'button','aria-label':'Önceki ay',onclick:function(){go(-1)}},[ic('left')]),
         el('span',{class:'mid',style:'text-align:center',text:AY_UZUN[mo]+' '+y}),
         el('button',{type:'button','aria-label':'Sonraki ay',onclick:function(){go(1)}},[ic('right')])]),
@@ -1618,16 +1650,25 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
 
   // ---------- Bugün: küçük haftalık program + büyük kutucuklar ----------
+  // ISO takvim haftası (KW)
+  function kw(d){ var t=new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), n=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-n);
+    var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y0)/864e5+1)/7); }
+  function weekMon(off){ var d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(off||0)); return d; }
   function weekProgram(){
-    // bugünden başlayan 7 gün: hep önümüzdeki hafta görünür
-    var t0 = today(), mon = dOf(t0), sel = view.sel || t0, strip = el('div',{class:'wstrip'});
-    for(var i=0;i<7;i++){ (function(d){
-      var k = ymd(d), n = S.tasks.filter(function(t){return t.date===k && !t.parent}).length, dots = el('span',{class:'dots'});
-      for(var j=0;j<Math.min(n,3);j++) dots.append(el('span'));
-      strip.append(el('button',{class:'wcell'+(k===sel?' sel':'')+(k===t0?' today':'')+(k<t0?' past':''),type:'button',
-        'aria-label':GUN_UZUN[d.getDay()]+' '+d.getDate()+', '+n+' iş','aria-pressed':String(k===sel),
-        onclick:function(){ view.sel = k; render(true); }},[el('span',{text:GUN_KISA[d.getDay()]}), el('b',{text:String(d.getDate())}), dots]));
-    })(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i)); }
+    // Pazartesi–Pazar haftalık plan; hafta sonu en altta ve farklı renkte, her günün işleri küçük kutucuklarda
+    var t0 = today(), mon = weekMon(view.wk||0), days = [];
+    for(var i=0;i<7;i++) days.push(ymd(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i)));
+    var sel = view.sel && days.indexOf(view.sel)>=0 ? view.sel : (days.indexOf(t0)>=0 ? t0 : days[0]);
+    var strip = el('div',{class:'wplan'});
+    days.forEach(function(k, i){
+      var d = dOf(k), ts = S.tasks.filter(function(t){return t.date===k && !t.parent}).sort(byTime), box = el('span',{class:'wits'});
+      ts.slice(0,3).forEach(function(t){ box.append(el('span',{class:'wit'+(t.doneAt?' done':''),text:(t.time?t.time+' ':'')+t.title})); });
+      if(ts.length>3) box.append(el('span',{class:'wit more',text:'+'+(ts.length-3)}));
+      if(!ts.length) box.append(el('span',{class:'wnone',text:'·'}));
+      strip.append(el('button',{class:'wday'+(i>4?' we':'')+(k===sel?' sel':'')+(k===t0?' today':'')+(k<t0?' past':''),type:'button',
+        'aria-label':GUN_UZUN[d.getDay()]+' '+d.getDate()+', '+ts.length+' iş','aria-pressed':String(k===sel),
+        onclick:function(){ view.sel = k; render(true); }},[el('span',{class:'wd'},[el('span',{text:GUN_KISA[d.getDay()]}), el('b',{text:String(d.getDate())})]), box]));
+    });
     var list = el('div',{class:'list'}), rows = 0;
     tasksOn(sel).forEach(function(t){ list.append(taskRow(t,{priority:sel===t0})); rows++; });
     if(sel===t0) priorities().forEach(function(x){ if(x.i){ list.append(itemRow(x.i,true)); rows++; } });
@@ -1639,14 +1680,18 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return out;
   }
   function bigTiles(){
-    var shopH = heading('alisveris'), open = shopOf(null).filter(function(x){return !x.boughtAt});
+    var lb = logTile();
+    return [shopTile(), lb];
+  }
+  function bigHead(icoNode, title, sub, onOpen){
+    return el('button',{class:'bighead',type:'button',onclick:function(){ buzz(); onOpen(); }},[icoNode, el('span',{class:'tx'},[el('b',{text:title}), el('small',{text:sub})]), ic('right')]);
+  }
+  function shopTile(){
+    var shopH = heading('alisveris'), open = shopOf(null).filter(function(x){return !x.boughtAt}), head = bigHead;
     var extra = S.lists.map(function(l){ var n=shopOf(l.id).filter(function(x){return !x.boughtAt}).length; return n ? l.name+' '+n : ''; }).filter(Boolean).join(' · ');
-    function head(icoNode, title, sub, onOpen){
-      return el('button',{class:'bighead',type:'button',onclick:function(){ buzz(); onOpen(); }},[icoNode, el('span',{class:'tx'},[el('b',{text:title}), el('small',{text:sub})]), ic('right')]);
-    }
     // Alışveriş: açık ürünler çip olarak, dokun = alındı
     var shop = el('div',{class:'big'},[head(shopH ? hIco(shopH) : el('span',{class:'ico'},[ic('cart')]), 'Alışveriş',
-      (open.length ? open.length+' ürün kaldı · dokun = alındı' : 'Ana liste boş')+(extra ? ' · '+extra : ''), function(){ view={name:'heading',id:'alisveris'}; render(); })]);
+      'Market: '+(open.length ? open.length+' ürün · dokun = alındı' : 'boş')+(extra ? ' · '+extra : ''), function(){ view={name:'heading',id:'alisveris'}; render(); })]);
     if(open.length){
       var chips = el('div',{class:'chips'});
       open.slice(0,6).forEach(function(x){ chips.append(el('button',{class:'chip',type:'button',text:x.name,onclick:function(){
@@ -1655,6 +1700,10 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       if(open.length>6) chips.append(el('button',{class:'chip more2',type:'button',text:'+'+(open.length-6),onclick:function(){ view={name:'heading',id:'alisveris'}; render(); }}));
       shop.append(chips);
     }
+    return shop;
+  }
+  function logTile(){
+    var head = bigHead;
     // Kayıt defteri: son tarihler, + Bugün tek dokunuş
     var lb = el('div',{class:'big'},[head(el('span',{class:'ico',style:'--hue:var(--c-plan)'},[ic('log')]), 'Kayıt defteri', 'Benzin, yıkama, tıraş… en son ne zaman?', function(){ view={name:'logbook'}; render(); })]);
     S.trackers.slice(0,4).forEach(function(t){
@@ -1662,21 +1711,20 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('button',{class:'plus',type:'button','aria-label':t.name+' bugün',onclick:function(){ logToday(t); }},[ic('plus'),'Bugün'])]));
     });
     lb.append(el('button',{class:'textlink',type:'button',text:'Geçen hafta ne yaptın? ›',onclick:function(){ view={name:'report'}; render(); }}));
-    // Para: bu ayın özeti
-    var now = new Date(), pm = el('div',{class:'big'},[head(el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), 'Gelir · Gider · Yatırım', AY_UZUN[now.getMonth()]+' özeti', function(){ view={name:'money'}; render(); }), msum(monthKey(today())),
-      S.fixed.length ? el('button',{class:'fixline',type:'button',onclick:function(){ view={name:'money'}; render(); }},[ic(fixLeft().length ? 'alert' : 'tick'), el('span',{text: fixLeft().length ? 'Sabit gider: '+fixLeft().length+' ödenmedi ('+fixLeft().slice(0,2).map(function(f){return f.name}).join(', ')+(fixLeft().length>2?'…':'')+')' : 'Sabit giderlerin hepsi ödendi'})]) : null]);
-    return [shop, lb, pm];
+    return lb;
   }
-
   function renderHome(){
     var lvl = Math.floor(S.points/100)+1, into = S.points%100;
     var pool = S.items.filter(function(i){return !i.heading});
     var todo = priorities(), late = S.tasks.filter(isLate), now=new Date();
     var done = todo.filter(function(x){ return x.t ? x.t.doneAt : x.i.done; }).length, total=todo.length;
     app.append(el('div',{class:'top'},[
-      el('div',{},[el('div',{class:'date',text:GUN_UZUN[now.getDay()]+', '+now.getDate()+' '+AY_UZUN[now.getMonth()]}), el('h1',{text:'Bugün'})]),
-      el('span',{class:'pts',id:'pts','aria-label':S.points+' puan'},[ic('star'), el('span',{text:String(S.points)})])]));
-    if(LOCKED) app.append(el('p',{class:'note',text:'Kayıtların okunamadı; güvenlik için yeni kayıt yapılmıyor. Odalar > Yedeği yükle ile geri dön.'}));
+      el('div',{},[el('div',{class:'date',text:GUN_UZUN[now.getDay()]+', '+now.getDate()+' '+AY_UZUN[now.getMonth()]+' · KW '+kw(now)}), el('h1',{text:'Genel'})]),
+      el('div',{class:'topact'},[
+        el('button',{class:'iconbtn',type:'button',id:'poolBtn','aria-label':pool.length ? 'Havuz, '+pool.length+' kayıt ayrılmayı bekliyor' : 'Havuz',onclick:function(){ buzz(); view={name:'pool'}; render(); }},[ic('inbox'), pool.length ? el('span',{class:'badge',text:String(pool.length)}) : null]),
+        el('button',{class:'iconbtn',type:'button','aria-label':'Ayarlar',onclick:function(){ buzz(); view={name:'settings'}; render(); }},[ic('gear')]),
+        el('span',{class:'pts',id:'pts','aria-label':S.points+' puan'},[ic('star'), el('span',{text:String(S.points)})])])]));
+    if(LOCKED) app.append(el('p',{class:'note',text:'Kayıtların okunamadı; güvenlik için yeni kayıt yapılmıyor. Ayarlar > Yedeği yükle ile geri dön.'}));
     else if(S.lastBackup && (Date.now()-new Date(S.lastBackup+'T12:00:00').getTime())>7*864e5) app.append(el('button',{class:'review',type:'button',onclick:function(){backupOut();render();}},[
       el('b',{text:'Yedek zamanı'}), el('small',{text:'7 gündür yedek almadın · dosyayı Drive\'ına kaydet'}), el('span',{class:'go',text:'Al'})]));
     if(reviewDue()) app.append(el('button',{class:'review',type:'button',onclick:function(){view={name:'review'};render();}},[
@@ -1688,13 +1736,15 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       el('div',{class:'level'},[el('strong',{text:'Seviye '+lvl}), el('div',{class:'bar'},[el('i',{style:'width:'+into+'%'})]), el('span',{text:(100-into)+' puan kaldı'})]),
       el('div',{class:'stats'},[
         el('div',{class:'stat'},[el('i',{text:'Görev zinciri'}), el('b',{text:streak(S.doneDays)+' gün'})]),
-        el('div',{class:'stat'},[el('i',{text:'Kayıt zinciri'}), el('b',{text:streak(S.activeDays)+' gün'})]),
-        el('button',{class:'stat',type:'button','aria-label':'Havuzu aç',onclick:function(){view={name:'pool'};render();}},[el('i',{text:'Havuzda'}), el('b',{text:pool.length+' kayıt'})])])]));
+        el('div',{class:'stat'},[el('i',{text:'Kayıt zinciri'}), el('b',{text:streak(S.activeDays)+' gün'})])])]));
     if(late.length) app.append(el('button',{class:'latebar',type:'button',onclick:function(){view={name:'heading',id:'yapilacak',lateOpen:true};render();}},[
       ic('alert'), el('span',{text:'Zamanı geçen '+late.length+' termin var'}), ic('right')]));
-    if(pool.length) app.append(el('button',{class:'nudge',type:'button',onclick:function(){view={name:'pool'};render();}},[
-      el('span',{class:'tx'},[el('b',{text:'Havuzda '+pool.length+' kayıt'}), el('small',{text:'Her ayırma +5 puan'})]), el('span',{class:'go',text:'Ayır'})]));
-    app.append(el('div',{class:'label'},[el('span',{text:'Önümüzdeki 7 gün'}), el('button',{type:'button',text:'Takvim',onclick:function(){view={name:'heading',id:'yapilacak'};render();}})]));
+    var wk = view.wk||0, wmon = weekMon(wk);
+    app.append(el('div',{class:'label wlabel'},[
+      el('button',{type:'button',class:'wnav','aria-label':'Önceki hafta',onclick:function(){ view.wk=wk-1; view.sel=null; render(true); }},[ic('left')]),
+      el('span',{text:(wk===0 ? 'Bu hafta' : wk===1 ? 'Gelecek hafta' : wk===-1 ? 'Geçen hafta' : wmon.getDate()+' '+AY_UZUN[wmon.getMonth()]+' haftası')+' · KW '+kw(wmon)}),
+      el('button',{type:'button',class:'wnav','aria-label':'Sonraki hafta',onclick:function(){ view.wk=wk+1; view.sel=null; render(true); }},[ic('right')]),
+      el('button',{type:'button',text:'Takvim',onclick:function(){view={name:'heading',id:'yapilacak'};render();}})]));
     weekProgram().forEach(function(n){ app.append(n); });
     bigTiles().forEach(function(n){ app.append(n); });
     app.append(el('div',{class:'chains'},[
@@ -1725,9 +1775,16 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(el('div',{class:'label'},[el('span',{text:'Takip'})]),
       el('div',{class:'list'},[
         el('button',{class:'row',type:'button',onclick:function(){view={name:'logbook'};render();}},[el('span',{class:'ico',style:'--hue:var(--c-plan)'},[ic('log')]), el('span',{class:'t',text:'Kayıt defteri'}), ic('right')]),
-        el('button',{class:'row',type:'button',onclick:function(){view={name:'money'};render();}},[el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), el('span',{class:'t',text:'Gelir · Gider · Yatırım'}), ic('right')])]));
+        el('button',{class:'row',type:'button',onclick:function(){view={name:'money'};render();}},[el('span',{class:'ico',style:'--hue:var(--c-rt)'},[ic('wallet')]), el('span',{class:'t',text:'Finans'}), ic('right')])]));
     app.append(el('div',{class:'label'},[el('span',{text:'Hafta'})]),
       el('div',{class:'list'},[el('button',{class:'row',type:'button',onclick:function(){view={name:'review'};render();}},[el('span',{class:'ico',style:'--hue:var(--house)'},[ic('star')]), el('span',{class:'t',text:'Pazar geri bakışı'}), ic('right')])]));
+    app.append(el('div',{class:'list'},[el('button',{class:'row',type:'button',onclick:function(){view={name:'settings'};render();}},[el('span',{class:'ico',style:'--hue:var(--house)'},[ic('gear')]), el('span',{class:'t',text:'Ayarlar'}), ic('right')])]));
+  }
+
+  // Ayarlar: görünüm, alarm/bildirim, yedek, puanlar, sürüm
+  function renderSettings(){
+    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Genel']),
+      el('div',{class:'headrow'},[el('span',{class:'ico',style:'--hue:var(--house)'},[ic('gear')]), el('h2',{text:'Ayarlar'})]));
     var th = document.documentElement.dataset.theme==='light' ? 'light' : 'dark', tseg = el('div',{class:'seg'});
     [['dark','Koyu'],['light','Açık']].forEach(function(o){
       tseg.append(el('button',{type:'button',class:o[0]===th?'on':'',text:o[1],onclick:function(){
@@ -1854,7 +1911,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   function renderHeading(h){
     if(!h){ view={name:'home'}; return render(); }
-    if(h.id!=='yapilacak' && h.id!=='ingilizce') app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']));
+    if(h.id!=='yapilacak' && h.id!=='ingilizce') app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Genel']));
     if(h.id==='alisveris'){ renderShop(h); return; }
     if(h.id==='yapilacak'){ renderTodo(); return; }
     if(h.type==='room'){
@@ -1887,13 +1944,13 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(el('div',{class:'headrow'},[hIco(h), el('h2',{text:'Alışveriş'})]));
     // listeler: Ana liste tek parça + ek listeler
     var tabs = el('div',{class:'chips listtabs'});
-    [{id:null,name:'Ana liste'}].concat(S.lists).forEach(function(l){
+    [{id:null,name:'Market'}].concat(S.lists).forEach(function(l){
       var n = shopOf(l.id).filter(function(x){return !x.boughtAt}).length;
       tabs.append(el('button',{type:'button',class:'chip'+((l.id||null)===lid?' on':''),text:l.name+(n?' · '+n:''),onclick:function(){ view.list=l.id; render(true); }}));
     });
     tabs.append(el('button',{type:'button',class:'chip more2',text:'+ Liste',onclick:function(){
       var nm=(prompt('Yeni listenin adı? (ör. Bauhaus, Doğum günü)')||'').trim().slice(0,24); if(!nm) return;
-      if(nm.toLocaleLowerCase('tr')==='ana liste' || S.lists.some(function(l){return l.name.toLocaleLowerCase('tr')===nm.toLocaleLowerCase('tr')})){ flash('Bu adda liste var'); return; }
+      if(/^(ana liste|market)$/.test(nm.toLocaleLowerCase('tr')) || S.lists.some(function(l){return l.name.toLocaleLowerCase('tr')===nm.toLocaleLowerCase('tr')})){ flash('Bu adda liste var'); return; }
       var id=uid('l'); S.lists.push({id:id,name:nm}); view.list=id; save(); render(true); }}));
     app.append(tabs);
     var f = el('form',{class:'shopadd',autocomplete:'off'},[
@@ -2065,8 +2122,14 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
 
   if(location.hash==='#pazar'){ view={name:'review'}; history.replaceState(null,'',location.pathname); }
+  // telefon kısa yolları (simgeye basılı tut): ?a=mali / ?a=gider
+  var qa = (location.search.match(/[?&]a=(\w+)/)||[])[1];
+  if(qa==='gider') view={name:'money'};
   render();
   alarmTick();
+  if(qa){ try{ history.replaceState(null,'',location.pathname); }catch(e){} }
+  if(qa==='mali') setTimeout(function(){ openMali(false); },300);
+  if(qa==='gider') setTimeout(function(){ var a=document.getElementById('mAmt'); if(a){ a.scrollIntoView({block:'center'}); a.focus(); } },300);
 })();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
 </script>
