@@ -348,6 +348,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .fixline svg{width:16px;height:16px;flex:none;color:var(--sun-deep)}
 .row .cnt{flex:none;font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
 .nav button[disabled]{opacity:.35}
+.label .hh{font-family:var(--display);font-weight:800;font-size:18px;color:var(--leaf)}
+.hhbars .bar i{background:var(--leaf)}
 [hidden]{display:none!important}
 
 /* ders görüntüleyici (tam ekran, hep koyu) */
@@ -478,6 +480,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(!Array.isArray(S.money)) S.money = [];
     if(!Array.isArray(S.trackers)) S.trackers = TRACK0();
     if(!Array.isArray(S.fixed)) S.fixed = FIX0();
+    if(!Array.isArray(S.people)) S.people = PEOPLE0();
     // eski sürüm: Alışveriş'e ayrılmış kayıtları ürün listesine çevir
     S.items.filter(function(i){return i.heading==='alisveris'}).forEach(function(i){ addProducts(i.text); });
     S.items = S.items.filter(function(i){return i.heading!=='alisveris'});
@@ -503,6 +506,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   load(lsGet());
   if(!Array.isArray(S.fixed)) S.fixed = FIX0();
+  if(!Array.isArray(S.people)) S.people = PEOPLE0();
   if(!Array.isArray(S.trackers)){ S.trackers = TRACK0(); S.logs = S.logs||[]; S.money = S.money||[]; }
 
 
@@ -1132,6 +1136,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   ]; }
   var MTYPE = {gider:'Gider', gelir:'Gelir', yatirim:'Yatırım'};
   // ---------- sabit giderler: her ay bir tuş ----------
+  // ---------- hane geliri: gelir kimden geldi (Ben / Eşim) ----------
+  function PEOPLE0(){ return [{id:'ben',name:'Ben'},{id:'es',name:'Eşim'}]; }
+  function personName(id){ var p=S.people.find(function(x){return x.id===id}); return p ? p.name : 'Ben'; }
   function FIX0(){ return [{id:'f-kira',name:'Kira',amount:null,cat:'Ev'},{id:'f-internet',name:'İnternet',amount:null,cat:'Fatura'},
     {id:'f-telefon',name:'Telefon',amount:null,cat:'Fatura'},{id:'f-sigorta',name:'Sigorta',amount:null,cat:'Fatura'}]; }
   function paidFix(f, mk){ return S.money.find(function(m){ return m.fx===f.id && monthKey(m.date)===mk; }); }
@@ -1203,7 +1210,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var fx = (past || /\s(ödendi|ödeme)\s/.test(s)) && /\s(ödedim|ödendi|yattı|gitti|verdim|ödeme|yatırdım)\s/.test(s) ? S.fixed.filter(function(f){ var w=f.name.toLocaleLowerCase('tr').split(/\s+/)[0]; return s.indexOf(w.length>5 ? w.slice(0,w.length-2) : w)>=0; }) : [];
     if(fx.length) tr = tr.filter(function(t){ return false; });
     if(!tr.length && !mo && !fx.length) return null;
-    return {fx:fx, date:pastDate(s), tr:tr, mo:mo, cat: mo ? (tr.length && mo.type==='gider' ? (tr[0].cat||tr[0].name) : catOf(s, mo.type)) : null};
+    var who = /\s(eşim|eşimin|eşimden|karım|karımın|hanım|hanımın|kocam|kocamın)\s/.test(s) ? 'es' : 'ben';
+    return {who:who, fx:fx, date:pastDate(s), tr:tr, mo:mo, cat: mo ? (tr.length && mo.type==='gider' ? (tr[0].cat||tr[0].name) : catOf(s, mo.type)) : null};
   }
   function addLife(L, text){
     var said = [], note = text.replace(/^\s*mali[,:]?\s*/i,'').trim();
@@ -1216,8 +1224,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         payFixed(f, a, L.date); said.push(f.name+' ödendi · '+money(a)); fxDone = true; });
       if(fxDone && L.mo) L.mo = null;
     }
-    if(L.mo){ S.money.push({id:uid('m'),type:L.mo.type,amount:L.mo.amount,cur:L.mo.cur,cat:L.cat,note:note,date:L.date,created:Date.now()});
-      said.push(MTYPE[L.mo.type]+' '+money(L.mo.amount, L.mo.cur)); }
+    if(L.mo){ var who = L.mo.type==='gelir' ? L.who : null;
+      S.money.push({id:uid('m'),type:L.mo.type,amount:L.mo.amount,cur:L.mo.cur,cat:L.cat,note:note,who:who||undefined,date:L.date,created:Date.now()});
+      said.push(MTYPE[L.mo.type]+(who ? ' ('+personName(who)+')' : '')+' '+money(L.mo.amount, L.mo.cur)); }
     mark(S.activeDays);
     return said.join(' · ');
   }
@@ -1303,6 +1312,19 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       el('p',{class:'note',text:'Mali yeni takibi adından tanır: “bugün spor yaptım” gibi.'}));
   }
 
+  function householdBlock(mk){
+    var inc = S.money.filter(function(m){ return m.type==='gelir' && m.cur==='€' && monthKey(m.date)===mk; });
+    if(!inc.length) return el('div',{});
+    var tot = inc.reduce(function(a,m){return a+m.amount},0), box = el('div',{});
+    box.append(el('div',{class:'label'},[el('span',{text:'Hane geliri'}), el('b',{class:'hh',text:money(tot)})]));
+    var cb = el('div',{class:'cbars hhbars'});
+    S.people.forEach(function(pp){
+      var v = inc.filter(function(m){ return (m.who||'ben')===pp.id; }).reduce(function(a,m){return a+m.amount},0);
+      if(!v) return;
+      cb.append(el('div',{class:'cbar'},[el('span',{text:pp.name}), el('div',{class:'bar'},[el('i',{style:'width:'+Math.max(4,Math.round(v/tot*100))+'%'})]), el('b',{text:money(v)})]));
+    });
+    box.append(cb); return box;
+  }
   function fixedBlock(mk){
     var cur = mk===monthKey(today()), edit = !!view.fixEdit, box = el('div',{});
     var head = el('div',{class:'label'},[el('span',{text:'Sabit giderler'}), el('button',{type:'button',text:edit?'Bitti':'Düzenle',onclick:function(){ view.fixEdit=!edit; view.fixAsk=null; render(true); }})]);
@@ -1351,6 +1373,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('span',{class:'mid',style:'text-align:center',text:AY_UZUN[mo]+' '+y}),
         el('button',{type:'button','aria-label':'Sonraki ay',onclick:function(){go(1)}},[ic('right')])]),
       msum(mk));
+    app.append(householdBlock(mk));
     app.append(fixedBlock(mk));
     var ms = S.money.filter(function(m){return monthKey(m.date)===mk}).sort(function(a,b){return b.date.localeCompare(a.date) || b.created-a.created});
     var cats = {}; ms.forEach(function(m){ if(m.type==='gider' && m.cur==='€') cats[m.cat]=(cats[m.cat]||0)+m.amount; });
@@ -1364,13 +1387,17 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var type = 'gider', seg = el('div',{class:'seg seg3'});
     Object.keys(MTYPE).forEach(function(k){ var b=el('button',{type:'button',class:k===type?'on':'',text:MTYPE[k]});
       b.onclick=function(){ type=k; seg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }; seg.append(b); });
+    var who = 'ben', whoSeg = el('div',{class:'seg',style:'grid-template-columns:repeat('+S.people.length+',1fr)',hidden:''});
+    S.people.forEach(function(pp){ var b=el('button',{type:'button',class:pp.id===who?'on':'',text:pp.name+"'in geliri"});
+      b.onclick=function(){ who=pp.id; whoSeg.querySelectorAll('button').forEach(function(x){x.classList.remove('on')}); b.classList.add('on'); }; whoSeg.append(b); });
+    seg.querySelectorAll('button').forEach(function(b,i){ var k=Object.keys(MTYPE)[i], old=b.onclick; b.onclick=function(){ old(); whoSeg.hidden = (k!=='gelir'); }; });
     var amt = el('input',{type:'text',inputmode:'decimal',placeholder:'Tutar €','aria-label':'Tutar',id:'mAmt'});
     var nt = el('input',{type:'text',placeholder:'Ne için? ör. market','aria-label':'Not',id:'mNote'});
-    var f = el('form',{class:'form',autocomplete:'off'},[seg, el('div',{class:'mrowin'},[amt, nt]), el('button',{class:'primary',type:'submit',text:'Kaydet'})]);
+    var f = el('form',{class:'form',autocomplete:'off'},[seg, whoSeg, el('div',{class:'mrowin'},[amt, nt]), el('button',{class:'primary',type:'submit',text:'Kaydet'})]);
     f.addEventListener('submit',function(e){
       e.preventDefault(); var a=parseFloat(amt.value.replace(',','.')); if(!(a>0)){ amt.focus(); return; }
       var n=nt.value.trim(), s=' '+n.toLocaleLowerCase('tr')+' ';
-      S.money.push({id:uid('m'),type:type,amount:a,cur:'€',cat:catOf(s,type),note:n||MTYPE[type],date:mk===monthKey(today())?today():mk+'-01',created:Date.now()});
+      S.money.push({id:uid('m'),type:type,amount:a,cur:'€',cat:catOf(s,type),note:n||MTYPE[type],who:type==='gelir'?who:undefined,date:mk===monthKey(today())?today():mk+'-01',created:Date.now()});
       mark(S.activeDays); award(2, MTYPE[type]+' kaydedildi'); save(); render(true);
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Elle ekle'})]), f);
@@ -1379,7 +1406,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     ms.forEach(function(m){
       var d = dOf(m.date);
       list.append(el('button',{class:'row mrow '+m.type,type:'button',onclick:function(){ if(!confirm('“'+m.note+'” silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==m}); save(); render(true); }},[
-        el('span',{class:'tx'},[el('span',{class:'t',text:m.note}), el('small',{text:d.getDate()+' '+AY_UZUN[d.getMonth()]+' · '+MTYPE[m.type]+' · '+m.cat})]),
+        el('span',{class:'tx'},[el('span',{class:'t',text:m.note}), el('small',{text:d.getDate()+' '+AY_UZUN[d.getMonth()]+' · '+MTYPE[m.type]+(m.type==='gelir' ? ' · '+personName(m.who||'ben') : '')+' · '+m.cat})]),
         el('b',{text:(m.type==='gider'?'−':'+')+money(m.amount, m.cur)})]));
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Bu ayın kayıtları'})]), list,
