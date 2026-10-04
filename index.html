@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0F4C5C">
+<meta name="theme-color" content="#0A1316">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -13,31 +13,26 @@
 /* Tek sütun telefon uygulaması: üstte günün halkası, ortada öncelikler, altta 4 sekme + ortada Mali tuşu.
    Tasarım şartnamesi: /tasarim/TASARIM-SPEC.md (proje dosyaları). Renk/yazı her zaman token'dan. */
 :root{
+  /* Koyu görünüm (Gece petrolü) varsayılan; açık görünüm sadece data-theme="light" ile */
+  --paper:#0A1316; --card:#111D21; --ink:#E7EFEE; --ink-2:#8FA3A6; --line:#213238; --track:#1A2A2F;
+  --house:#3BA6B8; --on-house:#061114; --house-tint:#123038;
+  --sun:#E2AE48; --sun-ink:#2A1C00; --sun-deep:#E2AE48;
+  --leaf:#46B983; --on-leaf:#061114; --late:#E46F5C; --late-tint:#36201C;
+  --c-shop:#6FA3DD; --c-task:#E2AE48; --c-note:#A396EE; --c-en:#EE7C8F; --c-rt:#55C08E; --c-plan:#BC97E6;
+  --tint:18%; --toast:#1E3036; --toast-ink:#E7EFEE; --scrim:rgba(0,0,0,.6); --shadow:0 12px 32px rgba(0,0,0,.55);
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  /* eski adlar: kayıtlı başlık renkleri (--r-*) yeni oda renklerine bağlanır */
+  --r-task:var(--c-task); --r-note:var(--c-note); --r-en:var(--c-en); --r-plan:var(--c-plan); --r-shop:var(--c-shop); --r-rt:var(--c-rt);
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
   --paper:#F4F6F5; --card:#FFFFFF; --ink:#13252B; --ink-2:#4E5F64; --line:#DCE3E1; --track:#E3E9E7;
   --house:#0F4C5C; --on-house:#FFFFFF; --house-tint:#E2EEF0;
   --sun:#F4B740; --sun-ink:#3D2A00; --sun-deep:#A86F00;
   --leaf:#1E7F55; --on-leaf:#FFFFFF; --late:#B83A2A; --late-tint:#FBE9E5;
   --c-shop:#2F6FB3; --c-task:#A86F00; --c-note:#5B4BC9; --c-en:#C23A50; --c-rt:#1F8A5B; --c-plan:#7E4DB5;
-  --tint:12%; --toast:#13252B; --toast-ink:#F4F6F5; --scrim:rgba(19,37,43,.45); --shadow:0 12px 32px rgba(15,76,92,.16);
-  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
-  --body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
-  /* eski adlar: kayıtlı başlık renkleri (--r-*) yeni oda renklerine bağlanır */
-  --r-task:var(--c-task); --r-note:var(--c-note); --r-en:var(--c-en); --r-plan:var(--c-plan); --r-shop:var(--c-shop); --r-rt:var(--c-rt);
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0E1719; --card:#162226; --ink:#E6EEEC; --ink-2:#9FB1B3; --line:#26363A; --track:#26363A;
-  --house:#6CC3D5; --on-house:#0E1719; --house-tint:#173238;
-  --sun:#F6C55A; --sun-ink:#2A1D00; --sun-deep:#F6C55A;
-  --leaf:#4CC48A; --on-leaf:#0E1719; --late:#F07A66; --late-tint:#3A1F1B;
-  --c-shop:#6FA8E8; --c-task:#E6B04A; --c-note:#A79BF2; --c-en:#F07F92; --c-rt:#5CCB95; --c-plan:#C29AEB;
-  --tint:20%; --toast:#2E4247; --toast-ink:#E6EEEC; --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#0E1719; --card:#162226; --ink:#E6EEEC; --ink-2:#9FB1B3; --line:#26363A; --track:#26363A;
-  --house:#6CC3D5; --on-house:#0E1719; --house-tint:#173238;
-  --sun:#F6C55A; --sun-ink:#2A1D00; --sun-deep:#F6C55A;
-  --leaf:#4CC48A; --on-leaf:#0E1719; --late:#F07A66; --late-tint:#3A1F1B;
-  --c-shop:#6FA8E8; --c-task:#E6B04A; --c-note:#A79BF2; --c-en:#F07F92; --c-rt:#5CCB95; --c-plan:#C29AEB;
-  --tint:20%; --toast:#2E4247; --toast-ink:#E6EEEC; --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark}
+  --tint:12%; --toast:#13252B; --toast-ink:#F4F6F5; --scrim:rgba(19,37,43,.45); --shadow:0 12px 32px rgba(15,76,92,.16); color-scheme:light}
 *{box-sizing:border-box}
 html,body{background:var(--paper);margin:0}
 body{color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(112px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
