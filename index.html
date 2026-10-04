@@ -318,6 +318,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .cdc.hol{border-color:color-mix(in srgb,var(--leaf) 60%,var(--line))}
 .halfq{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding:12px 14px;border-radius:18px;background:color-mix(in srgb,var(--late) 12%,var(--card));border:1px solid color-mix(in srgb,var(--late) 40%,var(--line))}
 .halfq .tx{display:flex;flex-direction:column;gap:2px}
+.cdc.tl{border-color:color-mix(in srgb,var(--c-task) 40%,var(--line));font-size:12.5px}
+.hbox{margin-top:6px}
+.hbrow{display:flex;align-items:center}
+.hbrow .row{flex:1;min-width:0}
+.hbrow + .hbrow{border-top:1px solid var(--line)}
+.hlater{flex:none;margin-right:8px;border:1px solid var(--line);background:transparent;color:var(--ink-2);border-radius:12px;padding:8px 10px;font:inherit;font-size:13px}
 .halfq small{color:var(--ink-2)}
 .halfq .row2{display:flex;gap:8px}
 .halfq .row2 button{flex:1;margin:0;min-height:44px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:700}
@@ -572,7 +578,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.14.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.15.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -604,6 +610,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(!Array.isArray(S.shop)) S.shop = [];
     if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
     if(!Array.isArray(S.countdowns)) S.countdowns = [];
+    if(!Array.isArray(S.habits)) S.habits = [];
+    if(!Array.isArray(S.tallies)) S.tallies = [];
     if(!Array.isArray(S.leaves)) S.leaves = [];
     if(!Array.isArray(S.routines)) S.routines = RT0();
     if(!S.rtLog || typeof S.rtLog!=='object') S.rtLog = {};
@@ -667,6 +675,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   if(!Array.isArray(S.people)) S.people = PEOPLE0();
   if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
   if(!Array.isArray(S.countdowns)) S.countdowns = [];
+  if(!Array.isArray(S.habits)) S.habits = [];
+  if(!Array.isArray(S.tallies)) S.tallies = [];
   if(!Array.isArray(S.leaves)) S.leaves = [];
   if(!Array.isArray(S.routines)) S.routines = RT0();
   if(!S.rtLog || typeof S.rtLog!=='object') S.rtLog = {};
@@ -879,7 +889,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   // "TR 18 aralık gün say", "18 aralığa kadar gün say TR", "sayaç: TR 18 aralık"
   function parseCountdown(text){
-    if(!/(gün\s+say|geri\s+sayım|^\s*(mali[,:]?\s*)?sayaç\b)/i.test(text)) return null;
+    if(!/(gün\s+say|geri\s+sayım|^\s*(mali[,:]?\s*)?sayaç(?=[\s:,]|$))/i.test(text)) return null;
     var x=' '+text.replace(/^\s*mali[,:]?\s*/i,' ').replace(/(gün\s+say\S*|geri\s+sayım\S*|sayaç)[:,]?/ig,' ').replace(/aralığ\S*/ig,'aralık').replace(/ocağ\S*/ig,'ocak').replace(/\s(a|e|ya|ye)?\s*kadar\b/ig,' ')+' ';
     var w=parseWhen(x); if(!w || w.time) return null;
     var nm=w.title.replace(/[^\wçğıöşüÇĞİÖŞÜ ]/g,'').trim().slice(0,14) || 'Sayaç';
@@ -895,6 +905,76 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(ymd(b)<today()){ a.setFullYear(y+1); b.setFullYear(y+1); if(m1>m2) a.setFullYear(y); }
     if(a>b) return null;
     return {from:ymd(a), to:ymd(b)};
+  }
+  // ---------- kendi zincirlerin: her gün / N günde bir / haftada N / belirli günler ----------
+  // h = {id,name,rule:{t:'every',n}|{t:'week',n}|{t:'days',d:[0-6]}, done:[tarih], snooze:tarih|null, created}
+  function addDays(k, n){ var d=dOf(k); d.setDate(d.getDate()+n); return ymd(d); }
+  function hLast(h, before){ var ds=h.done.filter(function(x){ return x<before; }).sort(); return ds[ds.length-1] || null; }
+  function hWeekCount(h, k){ var mon=ymd(weekMonOf(k)); return h.done.filter(function(x){ return x>=mon && x<=addDays(mon,6); }).length; }
+  function weekMonOf(k){ var d=dOf(k); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
+  function habitDue(h, k){
+    k = k || today();
+    if(h.snooze && h.snooze>k) return false;
+    if(h.done.indexOf(k)>=0) return true;            // bugün yapıldıysa listede ✓ olarak kalır
+    var r=h.rule, last=hLast(h,k);
+    if(r.t==='days') return r.d.indexOf(dOf(k).getDay())>=0;
+    if(r.t==='every') return !last || daysBetween(last,k) >= r.n || (h.snooze && h.snooze===k);
+    if(r.t==='week'){ var c=hWeekCount(h,k), left=7-((dOf(k).getDay()+6)%7), gap=Math.max(1,Math.floor(7/r.n));
+      if(c>=r.n) return false; return !last || daysBetween(last,k)>=gap || left<=r.n-c || (h.snooze && h.snooze===k); }
+    return true;
+  }
+  function daysBetween(a,b){ return Math.round((dOf(b)-dOf(a))/864e5); }
+  function ruleText(r){ return r.t==='every' ? (r.n===1 ? 'Her gün' : r.n+' günde bir') : r.t==='week' ? 'Haftada '+r.n : r.d.map(function(x){ return GUN_KISA[x]; }).join(', '); }
+  // zincir sayısı: kuralına uyduğu sürece kesintisiz yapılan sayısı
+  function habitStreak(h){
+    var ds=h.done.slice().sort(), n=0, t=today();
+    if(h.rule.t==='week'){
+      var w=ymd(weekMonOf(t)), cur=hWeekCount(h,t)>=h.rule.n;
+      if(cur) n++; w=addDays(w,-7);
+      while(hWeekCount(h,w)>=h.rule.n){ n++; w=addDays(w,-7); }
+      return n;
+    }
+    var lim = h.rule.t==='every' ? h.rule.n+1 : 8;   // bir gün esneklik
+    if(!ds.length || daysBetween(ds[ds.length-1], t) > lim) return 0;
+    n=1; for(var i=ds.length-1;i>0;i--){ if(daysBetween(ds[i-1],ds[i])<=lim) n++; else break; }
+    return n;
+  }
+  function habitDo(h){ var t=today(), i=h.done.indexOf(t);
+    if(i>=0) h.done.splice(i,1); else { h.done.push(t); h.snooze=null; mark(S.doneDays); flash(h.name+' ✓', habitStreak(h)+' zincir'); }
+    save(); render(true); }
+  function habitLater(h){ h.snooze = addDays(today(),1); save(); flash(h.name+' yarına ertelendi'); render(true); }
+  // "zincir: 2 günde bir spor", "zincir haftada 2 alışveriş", "zincir: her gün ilaç", "zincir: her pazartesi ve perşembe spor"
+  function parseHabit(text){
+    var s=' '+text.toLocaleLowerCase('tr').replace(/^\s*mali[,:]?\s*/,'')+' ';
+    if(!/^\s*zincir\b/.test(s)) return null;
+    s=s.replace(/^\s*zincir\S*\s*[:,]?/,' ');
+    var rule=null, m, NUM='(\\d{1,2}|bir|iki|üç|dört|beş|altı|yedi)';
+    function num(x){ return /\d/.test(x) ? +x : SAYI[x]; }
+    if((m=s.match(new RegExp('\\s'+NUM+'\\s+günde\\s+bir\\s')))){ rule={t:'every',n:num(m[1])}; }
+    else if((m=s.match(new RegExp('\\shaftada\\s+'+NUM+'(\\s+(kere|kez|defa|gün))?\\s')))){ rule={t:'week',n:Math.min(7,num(m[1]))}; }
+    else if((m=s.match(/\sher\s+gün\s/))){ rule={t:'every',n:1}; }
+    else {
+      var ds=[]; GUNLER.forEach(function(g,i){ if(new RegExp('\\s'+g+'(ları|leri|ye|ya|i|ı)?\\s').test(s)) ds.push(i); });
+      if(ds.length){ rule={t:'days',d:ds.sort()}; m=[s.match(new RegExp('\\s(her\\s+)?('+GUNLER.join('|')+')\\S*(\\s+(ve|,)\\s+('+GUNLER.join('|')+')\\S*)*\\s'))[0]]; }
+    }
+    if(!rule || !(rule.n>0 || rule.d)) return null;
+    var name=s.replace(m[0],' ').replace(/\s(her|bir|kere|kez|defa|yap|yaparım|giderim|git)\s/g,' ').replace(/\s{2,}/g,' ').trim();
+    if(!name) return null;
+    return {name:name.charAt(0).toLocaleUpperCase('tr')+name.slice(1), rule:rule};
+  }
+  // ---------- kendi para sayaçların: "sigara 10 euro", "şirket kartına 20 euro" ----------
+  function tallyStem(n){ return n.toLocaleLowerCase('tr').slice(0, Math.max(4, Math.min(n.length, 6))); }
+  function tallyOf(text){
+    var s=' '+text.toLocaleLowerCase('tr')+' ';
+    return S.tallies.find(function(t){ var st=tallyStem(t.name); return s.indexOf(' '+st)>=0; }) || null;
+  }
+  function tallyMonth(t, mk){ return S.money.filter(function(m){ return m.tally===t.id && monthKey(m.date)===mk; }); }
+  function tallyChips(){
+    if(!S.tallies.length) return null;
+    var mk=monthKey(today()), row=el('div',{class:'cdrow'});
+    S.tallies.forEach(function(t){ var sum=tallyMonth(t,mk).reduce(function(a,m){ return a+m.amount; },0);
+      row.append(el('button',{class:'cdc tl',type:'button',onclick:function(){ view={name:'money'}; render(); }},[el('span',{text:t.name}), el('b',{text:money(sum)})])); });
+    return row;
   }
   function taskRow(t, opts){
     opts = opts || {};
@@ -1376,6 +1456,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     else if(view.name==='money') renderMoney();
     else if(view.name==='settings') renderSettings();
     else if(view.name==='pending') renderPending();
+    else if(view.name==='habits') renderHabits();
     updateTabs();
     window.scrollTo(0, keep ? y : 0);
   }
@@ -1599,6 +1680,19 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     S.money.forEach(function(m){ if(m.cur==='€' && monthKey(m.date)===mk) r[m.type] += m.amount; });
     return r;
   }
+  // Finans: kendi sayaçların (sigara, şirket kartı…) bu ay
+  function tallyBlock(mk){
+    var b=el('div',{class:'big'},[el('div',{class:'bighead'},[el('span',{class:'ico',style:'--hue:var(--c-task)'},[ic('wallet')]), el('span',{class:'tx'},[el('b',{text:'Sayaçlarım'}), el('small',{text:"“sigara 10 euro” de, ayrı tutulur"})])])]);
+    S.tallies.forEach(function(t){ var ms=tallyMonth(t,mk), sum=ms.reduce(function(a,m){ return a+m.amount; },0);
+      b.append(el('div',{class:'trow'},[el('span',{class:'tx'},[el('b',{text:t.name}), el('small',{text:ms.length+' kayıt · bu ay '+money(sum)})]),
+        el('button',{class:'plus',type:'button','aria-label':t.name+' ekle',onclick:function(){ var a=parseAmount(prompt(t.name+' kaç euro?')||''); if(!(a>0)) return;
+          S.money.push({id:uid('m'),type:'gider',amount:a,cur:'€',cat:t.name,note:t.name,date:today(),created:Date.now(),tally:t.id}); save(); flash(t.name+' · '+money(a)); render(true); }},[ic('plus'),'Ekle']),
+        el('button',{class:'rtdel',type:'button','aria-label':t.name+' sayacını kaldır',text:'×',onclick:function(){ if(!confirm('"'+t.name+'" sayacı kaldırılsın mı? (Kayıtlar giderlerde kalır.)')) return; S.tallies=S.tallies.filter(function(x){return x!==t;}); save(); render(true); }})])); });
+    var nm=el('input',{class:'rtin',placeholder:'Yeni sayaç (ör. Sigara)','aria-label':'Yeni sayaç adı'});
+    b.append(el('div',{class:'rtstep'},[nm, el('button',{class:'rted',type:'button',text:'Ekle',onclick:function(){ var v=nm.value.trim(); if(!v) return;
+      S.tallies.push({id:uid('y'),name:(v.charAt(0).toLocaleUpperCase('tr')+v.slice(1)).slice(0,20)}); save(); render(true); }})]));
+    return b;
+  }
   function msum(mk){
     var r = monthSums(mk);
     return el('div',{class:'msum'},[
@@ -1715,6 +1809,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('span',{class:'mid',style:'text-align:center',text:AY_UZUN[mo]+' '+y}),
         el('button',{type:'button','aria-label':'Sonraki ay',onclick:function(){go(1)}},[ic('right')])]),
       msum(mk));
+    app.append(tallyBlock(mk));
     app.append(householdBlock(mk));
     app.append(fixedBlock(mk));
     var ms = S.money.filter(function(m){return monthKey(m.date)===mk}).sort(function(a,b){return b.date.localeCompare(a.date) || b.created-a.created});
@@ -1831,6 +1926,40 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     lb.append(el('button',{class:'textlink',type:'button',text:'Geçen hafta ne yaptın? ›',onclick:function(){ view={name:'report'}; render(); }}));
     return lb;
   }
+  // Genel'de günün zincirleri: kompakt liste, ✓ yaptım / ertele
+  function habitToday(){
+    var box=el('div',{class:'hbox'}), due=S.habits.filter(function(h){ return habitDue(h); });
+    box.append(el('div',{class:'label'},[el('span',{text:'Günün zincirleri'}), el('button',{type:'button',text:S.habits.length?'Tümü':'+ Zincir',onclick:function(){ view={name:'habits'}; render(); }})]));
+    if(!S.habits.length){ box.append(el('p',{class:'note',text:"Mali'ye “zincir: 2 günde bir spor” ya da “zincir: haftada 2 alışveriş” de."})); return box; }
+    if(!due.length){ box.append(el('p',{class:'note',text:'Bugün zincir yok, rahat bir gün.'})); return box; }
+    var l=el('div',{class:'list'});
+    due.forEach(function(h){ var dn=h.done.indexOf(today())>=0;
+      l.append(el('div',{class:'hbrow'+(dn?' done':'')},[
+        el('button',{class:'row'+(dn?' done':''),type:'button',onclick:function(){ habitDo(h); }},[el('span',{class:'box'}), el('span',{class:'tx'},[el('span',{class:'t',text:h.name}), el('small',{text:ruleText(h.rule)+' · '+habitStreak(h)+' zincir'})])]),
+        dn ? null : el('button',{class:'hlater',type:'button','aria-label':h.name+' ertele',text:'Ertele',onclick:function(){ habitLater(h); }})])); });
+    box.append(l);
+    return box;
+  }
+  // Zincirler ekranı: kur, gör, sil
+  function renderHabits(){
+    app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Genel']),
+      el('div',{class:'headrow'},[el('span',{class:'ico',style:'--hue:var(--c-task)'},[ic('flame')]), el('h2',{text:'Zincirler'})]),
+      el('p',{class:'note',style:'margin-top:-8px',text:"Zinciri sen kurarsın. Günü gelince Genel'deki “Günün zincirleri”ne düşer."}));
+    var l=el('div',{class:'list'});
+    if(!S.habits.length) l.append(el('div',{class:'empty',text:'Henüz zincir yok.'}));
+    S.habits.forEach(function(h){
+      var d7=el('span',{class:'days7'}); for(var i=6;i>=0;i--){ var k=addDays(today(),-i); d7.append(el('i',{class:h.done.indexOf(k)>=0?'y':(i===0?'t':'')})); }
+      l.append(el('div',{class:'row'},[el('span',{class:'tx'},[el('span',{class:'t',text:h.name}), el('small',{text:ruleText(h.rule)+' · '+habitStreak(h)+' zincir'}), d7]),
+        el('button',{class:'rtdel',type:'button','aria-label':h.name+' zincirini sil',text:'×',onclick:function(){ if(!confirm('"'+h.name+'" zinciri silinsin mi?')) return; S.habits=S.habits.filter(function(x){return x!==h;}); save(); render(true); }})]));
+    });
+    app.append(l);
+    var nm=el('input',{class:'rtin',placeholder:'Ad (ör. Spor)','aria-label':'Zincir adı'});
+    var sel=el('select',{class:'rtin','aria-label':'Ne sıklıkla'}); [['e1','Her gün'],['e2','2 günde bir'],['e3','3 günde bir'],['w1','Haftada 1'],['w2','Haftada 2'],['w3','Haftada 3']].forEach(function(o){ sel.append(el('option',{value:o[0],text:o[1]})); });
+    app.append(el('div',{class:'label'},[el('span',{text:'Yeni zincir'})]), el('div',{class:'rtstep'},[nm, sel, el('button',{class:'rted',type:'button',text:'Ekle',onclick:function(){
+      var v=nm.value.trim(); if(!v) return; var o=sel.value, r=o[0]==='e' ? {t:'every',n:+o[1]} : {t:'week',n:+o[1]};
+      S.habits.push({id:uid('h'),name:v.charAt(0).toLocaleUpperCase('tr')+v.slice(1),rule:r,done:[],snooze:null,created:Date.now()}); save(); render(true); }})]),
+      el('p',{class:'note',text:"Belirli günler için Mali'ye “zincir: her pazartesi ve perşembe spor” de."}));
+  }
   function renderHome(){
     var lvl = Math.floor(S.points/100)+1, into = S.points%100;
     var pool = S.items.filter(function(i){return !i.heading});
@@ -1856,6 +1985,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('div',{class:'stat'},[el('i',{text:'Görev zinciri'}), el('b',{text:streak(S.doneDays)+' gün'})]),
         el('div',{class:'stat'},[el('i',{text:'Kayıt zinciri'}), el('b',{text:streak(S.activeDays)+' gün'})])])]));
     var cc = countChips(); if(cc) app.append(cc);
+    var tc = tallyChips(); if(tc) app.append(tc);
+    app.append(habitToday());
     S.tasks.filter(halfDue).slice(0,2).forEach(function(t){
       app.append(el('div',{class:'halfq'},[el('div',{class:'tx'},[el('b',{text:'Yarı süre geçti: '+t.title}), el('small',{text:'Son gün '+whenLabel(t)+' · yaptın mı?'})]),
         el('div',{class:'row2'},[el('button',{type:'button',class:'primary',text:'Yaptım',onclick:function(){ toggleTask(t); }}),
@@ -2213,6 +2344,17 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(cdw){ closeMali(); inp.value=''; S.countdowns.push({id:uid('c'),name:cdw.name,date:cdw.date}); save(); flash('Sayaç: '+cdw.name, daysTo(cdw.date)+' gün'); render(); return; }
     var lvw=parseLeave(t);
     if(lvw){ closeMali(); inp.value=''; S.leaves.push({id:uid('v'),from:lvw.from,to:lvw.to}); save(); flash('Yıllık izin eklendi', lvw.from.slice(8)+'.'+lvw.from.slice(5,7)+' – '+lvw.to.slice(8)+'.'+lvw.to.slice(5,7)); render(); return; }
+    var hb=parseHabit(t);
+    if(hb){ closeMali(); inp.value=''; S.habits.push({id:uid('h'),name:hb.name,rule:hb.rule,done:[],snooze:null,created:Date.now()}); save(); flash('Zincir kuruldu: '+hb.name, ruleText(hb.rule)); render(); return; }
+    var tm=t.match(/^\s*(?:mali[,:]?\s*)?(?:sayaç|yeni\s+sayaç)\s*(?:ekle)?\s*[:,]?\s*([^\d]+?)\s*$/i);
+    if(tm && !/\d/.test(t)){ closeMali(); inp.value=''; var tn=tm[1].trim(); tn=tn.charAt(0).toLocaleUpperCase('tr')+tn.slice(1);
+      if(!S.tallies.some(function(x){ return tallyStem(x.name)===tallyStem(tn); })) S.tallies.push({id:uid('y'),name:tn.slice(0,20)});
+      save(); flash('Sayaç kuruldu: '+tn, '“'+tn.toLocaleLowerCase('tr')+' 10 euro” de'); render(); return; }
+    var ty=tallyOf(t), ta=ty && /\d|euro|bir|iki|üç|beş|on/i.test(t) ? parseAmount(t) : 0;
+    if(ty && ta>0){ closeMali(); inp.value='';
+      S.money.push({id:uid('m'),type:'gider',amount:ta,cur:'€',cat:ty.name,note:t.trim(),date:today(),created:Date.now(),tally:ty.id});
+      mark(S.activeDays); save(); var tot=tallyMonth(ty,monthKey(today())).reduce(function(a,m){ return a+m.amount; },0);
+      flash(ty.name+' · '+money(ta), 'Bu ay '+money(tot)); render(); return; }
     var dlw=parseDL(t);
     if(dlw){ closeMali(); inp.value=''; var dt=addTask(dlw); mark(S.activeDays); save(); flash('Son gün takvimde · '+dlTag(dt)+dt.title, 'Yarı sürede soracağım'); render(); return; }
     var L=parseLife(t);
