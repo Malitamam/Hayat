@@ -1107,14 +1107,14 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   // ses tanıma tutarı bazen yazıyla getirir: "altmış euro" → "60 euro", "yüz yirmi beş euro" → "125 euro"
   var NUMW = {sıfır:0,bir:1,iki:2,üç:3,dört:4,beş:5,altı:6,yedi:7,sekiz:8,dokuz:9,on:10,yirmi:20,otuz:30,kırk:40,elli:50,altmış:60,yetmiş:70,seksen:80,doksan:90,yüz:100,bin:1000};
-  function numWords(s){
+  function numWords(s, force){
     var toks = s.split(' '), out = [], i = 0;
     while(i < toks.length){
       var j = i, big = false;
       while(j < toks.length && NUMW.hasOwnProperty(toks[j])){ if(NUMW[toks[j]]>=20) big = true; j++; }
       var next = toks[j] || '';
       var cur = /^(€|euro|avro|eur|lira|tl|₺)/.test(next);
-      if(j > i && (cur || ((big || j-i>1) && /^$|^(tuttu|ödedim|harcadım|verdim)$/.test(next)))){
+      if(j > i && (force || cur || ((big || j-i>1) && /^$|^(tuttu|ödedim|harcadım|verdim)$/.test(next)))){
         var total = 0, c = 0;
         for(var k=i;k<j;k++){ var v = NUMW[toks[k]]; if(v===100) c = (c||1)*100; else if(v===1000){ total += (c||1)*1000; c = 0; } else c += v; }
         out.push(String(total + c)); i = j;
@@ -1124,6 +1124,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   function parseLife(text){
     var s = ' '+text.replace(/[’`]/g,"'").toLocaleLowerCase('tr').replace(/[,.!?]/g,' ')+' ';
+    // ses tanıma bazen "dün altmış euro" yerine "düğüm atmış o" yazar
+    s = s.replace(/\sdüğüm\s/g,' dün ').replace(/\s(atmış|altımış|altmiş)\s(o|euro|avro)\s/g,' altmış euro ');
     s = numWords(s).replace(/(\d) (\d{1,2}) (€|euro|avro|eur|lira|tl)/,'$1,$2 $3');
     var past = /(d|t)[ıiuü]m\s/.test(s) || /\s(yattı|geldi|tuttu)\s/.test(s);
     if(!past && /\s(yarın|haftaya|gelecek|önümüzdeki|öbür gün)/.test(s)) return null;
@@ -1135,11 +1137,25 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
   function addLife(L, text){
     var said = [], note = text.replace(/^\s*mali[,:]?\s*/i,'').trim();
-    L.tr.forEach(function(t){ S.logs.push({id:uid('l'),tr:t.id,date:L.date,amount:(L.mo && L.tr.length===1 && L.mo.type==='gider') ? L.mo.amount : null,created:Date.now()}); said.push(t.name); });
+    L.made = [];
+    L.tr.forEach(function(t){ var lg={id:uid('l'),tr:t.id,date:L.date,amount:(L.mo && L.tr.length===1 && L.mo.type==='gider') ? L.mo.amount : null,created:Date.now()}; S.logs.push(lg); L.made.push([t,lg]); said.push(t.name); });
     if(L.mo){ S.money.push({id:uid('m'),type:L.mo.type,amount:L.mo.amount,cur:L.mo.cur,cat:L.cat,note:note,date:L.date,created:Date.now()});
       said.push(MTYPE[L.mo.type]+' '+money(L.mo.amount, L.mo.cur)); }
     mark(S.activeDays);
     return said.join(' · ');
+  }
+  // tutar anlaşılamadıysa Mali kısaca sorar: "Benzin ne kadardı?"
+  var askAmt = null;
+  function parseAmount(t){
+    var s = numWords(' '+t.toLocaleLowerCase('tr').replace(/[,.!?]/g,function(c){return c===','?',':' ';})+' ', true).replace(/(\d),(\d{1,2})(?!\d)/,'$1.$2');
+    var m = s.match(/(\d+(?:\.\d{1,2})?)/); return m ? parseFloat(m[1]) : 0;
+  }
+  function askForAmount(t, lg){
+    askAmt = {t:t, lg:lg};
+    sheet.hidden=false; document.getElementById('maliTitle').textContent = t.name+' ne kadardı?';
+    var inp=document.getElementById('maliInput'); inp.value=''; inp.placeholder='60 euro';
+    document.getElementById('saveNote').textContent='Tutarı söyle ya da yaz. Vazgeçersen sadece kayıt defterinde kalır.';
+    setTimeout(function(){ inp.focus(); },60);
   }
   function trIco(t){ return el('span',{class:'ico',style:'--hue:var(--c-plan)'},[t.ic ? ic(t.ic) : t.name.charAt(0).toLocaleUpperCase('tr')]); }
   function trLogs(t){ return S.logs.filter(function(l){return l.tr===t.id}).sort(function(a,b){return b.date.localeCompare(a.date) || b.created-a.created}); }
@@ -1496,12 +1512,12 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 
   // ---------- Mali kartı: ortadaki tuş = dinle, basılı tut = yaz ----------
   var stopMic=function(){};
-  var sheet=document.getElementById('maliSheet');
+  var sheet=document.getElementById('maliSheet'), SAVENOTE=document.getElementById('saveNote').textContent;
   function openMali(listen){
     sheet.hidden=false; var m=document.getElementById('mic');
     if(listen && !m.hidden) m.click(); else setTimeout(function(){ document.getElementById('maliInput').focus(); },60);
   }
-  function closeMali(){ stopMic(); sheet.hidden=true; }
+  function closeMali(){ stopMic(); sheet.hidden=true; askAmt=null; document.getElementById('maliTitle').textContent="Mali'ye söyle"; document.getElementById('maliInput').placeholder="yarın 10'da dişçiyi ara"; document.getElementById('saveNote').textContent=SAVENOTE; }
   pressable(document.getElementById('maliBtn'), function(){ buzz(); openMali(true); }, function(){ openMali(false); });
   document.getElementById('maliDim').addEventListener('click', closeMali);
   document.getElementById('maliClose').addEventListener('click', closeMali);
@@ -1509,9 +1525,20 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   document.getElementById('maliForm').addEventListener('submit',function(e){
     e.preventDefault();
     var inp=document.getElementById('maliInput'), t=inp.value.trim(); if(!t) return;
+    var ask = askAmt;
+    if(ask){
+      var amt = parseAmount(t); closeMali(); inp.value='';
+      if(amt){ ask.lg.amount = amt; S.money.push({id:uid('m'),type:'gider',amount:amt,cur:'€',cat:ask.t.cat||'Diğer',note:ask.t.name,date:ask.lg.date,created:Date.now()});
+        award(2, ask.t.name+' gideri '+money(amt)); save(); render(); }
+      else flash('Tutarı anlayamadım','Para sayfasından ekleyebilirsin');
+      return;
+    }
     var L=parseLife(t);
     closeMali();
-    if(L){ var said=addLife(L,t); inp.value=''; award(2, said || 'Kaydedildi'); save(); render(); return; }
+    if(L){ var said=addLife(L,t); inp.value=''; award(2, said || 'Kaydedildi'); save(); render();
+      var need = !L.mo && L.made.filter(function(x){ return x[0].id==='benzin' || x[0].id==='yikama'; })[0];
+      if(need) setTimeout(function(){ askForAmount(need[0], need[1]); }, 700);
+      return; }
     var w=parseWhen(t);
     if(w){ var nt=addTask(w); mark(S.activeDays); inp.value=''; save(); flash('Takvime eklendi · '+nt.title, whenLabel(nt)); render(); return; }
     S.items.push({id:'i'+Date.now(),text:t,created:Date.now(),heading:null,suggested:suggest(t),done:false,doneAt:null});
