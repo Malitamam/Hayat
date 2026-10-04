@@ -311,6 +311,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:99px;min-height:40px;padding:0 14px;font-size:14px;color:var(--ink)}
 .chip:active{background:var(--leaf);color:var(--on-leaf);border-color:var(--leaf)}
+.listtabs{margin:-4px 0 12px}
+.listtabs .chip.on{background:var(--house);color:var(--on-leaf,#fff);border-color:var(--house);font-weight:600}
 .chip.more2{color:var(--house);font-weight:600;border-style:dashed}
 .trow{display:flex;align-items:center;gap:10px;min-height:52px;border-top:1px solid var(--line);padding-top:8px}
 .trow.first{border-top:0;padding-top:0}
@@ -464,7 +466,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
       {id:"bos",name:"Boş oda",type:"room",color:"",icon:"·",empty:true}
     ],
     items:[],  // {id,text,created,heading|null,suggested|null,done:false,doneAt}
-    shop:[],   // {id,name,created,boughtAt|null}
+    shop:[],   // {id,name,created,boughtAt|null,list?}  list yok = Ana liste
+    lists:[{id:'online',name:'Online'}],   // ek alışveriş listeleri
     tasks:[],  // {id,title,date,time|null,created,doneAt|null}
     logs:[],   // kayıt defteri: {id,tr,date,amount|null,created}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
@@ -500,6 +503,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     S = obj;
     Object.keys(DEFAULT).forEach(function(k){ if(S[k]===undefined || (Array.isArray(DEFAULT[k]) && !Array.isArray(S[k]))) S[k] = JSON.parse(JSON.stringify(DEFAULT[k])); });
     if(!Array.isArray(S.shop)) S.shop = [];
+    if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
     if(!Array.isArray(S.tasks)) S.tasks = [];
     if(!Array.isArray(S.logs)) S.logs = [];
     if(!Array.isArray(S.money)) S.money = [];
@@ -521,11 +525,27 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return s.split(/\s*(?:,|;|\n|\sve\s|\sile\s|\s\+\s)\s*/i).map(function(x){return x.trim();}).filter(Boolean)
       .map(function(x){ return x.charAt(0).toLocaleUpperCase('tr')+x.slice(1); });
   }
-  function addProducts(text){
+  // "online listeye kulaklık ekle" → Online listesi; liste adı yoksa Ana liste
+  function listOf(text){
+    var low = ' '+text.toLocaleLowerCase('tr')+' ';
+    for(var i=0;i<S.lists.length;i++){
+      var nm = S.lists[i].name.toLocaleLowerCase('tr').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var suf = nm.length>=5 ? "'?[ye]?[ae]" : "'[ye]?[ae]";   // kısa adlarda ek için kesme işareti şart ("eve" ≠ "Ev'e")
+      var re = new RegExp("\\s"+nm+"(\\s+(alışveriş\\s+)?(listesine|listeye|listesi|listem)|"+suf+"\\s)");
+      if(re.test(low)) return {id:S.lists[i].id, strip:new RegExp("(^|\\s)"+nm+"("+suf+"|\\s+(alışveriş\\s+)?(listesine|listeye|listesi|listem))(?=\\s|$)",'i')};
+    }
+    return null;
+  }
+  function shopOf(lid){ return S.shop.filter(function(x){ return (x.list||null)===(lid||null); }); }
+  function addProducts(text, lid){
+    var L = listOf(text);
+    if(L){ lid = L.id; text = text.toLocaleLowerCase('tr').replace(L.strip,' ').replace(/\s+/g,' ').trim(); }
     var names = splitProducts(text);
     names.forEach(function(n,k){
-      if(S.shop.some(function(x){return !x.boughtAt && x.name.toLocaleLowerCase('tr')===n.toLocaleLowerCase('tr')})) return;
-      S.shop.push({id:'s'+Date.now()+'_'+k+'_'+Math.random().toString(36).slice(2,6),name:n,created:Date.now(),boughtAt:null});
+      if(shopOf(lid).some(function(x){return !x.boughtAt && x.name.toLocaleLowerCase('tr')===n.toLocaleLowerCase('tr')})) return;
+      var it = {id:'s'+Date.now()+'_'+k+'_'+Math.random().toString(36).slice(2,6),name:n,created:Date.now(),boughtAt:null};
+      if(lid) it.list = lid;
+      S.shop.push(it);
     });
     return names.length;
   }
@@ -537,6 +557,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   if(!S.lastBackup && !LOCKED) S.lastBackup = today();
   if(!Array.isArray(S.fixed)) S.fixed = FIX0();
   if(!Array.isArray(S.people)) S.people = PEOPLE0();
+  if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
   if(!Array.isArray(S.trackers)){ S.trackers = TRACK0(); S.logs = S.logs||[]; S.money = S.money||[]; }
 
 
@@ -1471,17 +1492,18 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return out;
   }
   function bigTiles(){
-    var shopH = heading('alisveris'), open = S.shop.filter(function(x){return !x.boughtAt});
+    var shopH = heading('alisveris'), open = shopOf(null).filter(function(x){return !x.boughtAt});
+    var extra = S.lists.map(function(l){ var n=shopOf(l.id).filter(function(x){return !x.boughtAt}).length; return n ? l.name+' '+n : ''; }).filter(Boolean).join(' · ');
     function head(icoNode, title, sub, onOpen){
       return el('button',{class:'bighead',type:'button',onclick:function(){ buzz(); onOpen(); }},[icoNode, el('span',{class:'tx'},[el('b',{text:title}), el('small',{text:sub})]), ic('right')]);
     }
     // Alışveriş: açık ürünler çip olarak, dokun = alındı
     var shop = el('div',{class:'big'},[head(shopH ? hIco(shopH) : el('span',{class:'ico'},[ic('cart')]), 'Alışveriş',
-      open.length ? open.length+' ürün kaldı · dokun = alındı' : 'Liste boş', function(){ view={name:'heading',id:'alisveris'}; render(); })]);
+      (open.length ? open.length+' ürün kaldı · dokun = alındı' : 'Ana liste boş')+(extra ? ' · '+extra : ''), function(){ view={name:'heading',id:'alisveris'}; render(); })]);
     if(open.length){
       var chips = el('div',{class:'chips'});
       open.slice(0,6).forEach(function(x){ chips.append(el('button',{class:'chip',type:'button',text:x.name,onclick:function(){
-        x.boughtAt = today(); var left = S.shop.filter(function(y){return !y.boughtAt}).length;
+        x.boughtAt = today(); var left = shopOf(null).filter(function(y){return !y.boughtAt}).length;
         left ? award(2,'Alındı') : award(12,'Liste bitti 🎉'); save(); render(true); }})); });
       if(open.length>6) chips.append(el('button',{class:'chip more2',type:'button',text:'+'+(open.length-6),onclick:function(){ view={name:'heading',id:'alisveris'}; render(); }}));
       shop.append(chips);
@@ -1655,34 +1677,48 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   }
 
   function renderShop(h){
-    var open = S.shop.filter(function(x){return !x.boughtAt});
-    var got = S.shop.filter(function(x){return x.boughtAt});
+    var lid = view.list && S.lists.some(function(l){return l.id===view.list}) ? view.list : null;
+    var cur = shopOf(lid), open = cur.filter(function(x){return !x.boughtAt}), got = cur.filter(function(x){return x.boughtAt});
     app.append(el('div',{class:'headrow'},[hIco(h), el('h2',{text:'Alışveriş'})]));
+    // listeler: Ana liste tek parça + ek listeler
+    var tabs = el('div',{class:'chips listtabs'});
+    [{id:null,name:'Ana liste'}].concat(S.lists).forEach(function(l){
+      var n = shopOf(l.id).filter(function(x){return !x.boughtAt}).length;
+      tabs.append(el('button',{type:'button',class:'chip'+((l.id||null)===lid?' on':''),text:l.name+(n?' · '+n:''),onclick:function(){ view.list=l.id; render(true); }}));
+    });
+    tabs.append(el('button',{type:'button',class:'chip more2',text:'+ Liste',onclick:function(){
+      var nm=(prompt('Yeni listenin adı? (ör. Bauhaus, Doğum günü)')||'').trim().slice(0,24); if(!nm) return;
+      if(nm.toLocaleLowerCase('tr')==='ana liste' || S.lists.some(function(l){return l.name.toLocaleLowerCase('tr')===nm.toLocaleLowerCase('tr')})){ flash('Bu adda liste var'); return; }
+      var id=uid('l'); S.lists.push({id:id,name:nm}); view.list=id; save(); render(true); }}));
+    app.append(tabs);
     var f = el('form',{class:'shopadd',autocomplete:'off'},[
-      el('input',{type:'text',id:'shopIn',placeholder:'süt, ekmek ve yumurta','aria-label':'Ürün ekle'}),
+      el('input',{type:'text',id:'shopIn',placeholder:lid ? 'kulaklık, pil' : 'süt, ekmek ve yumurta','aria-label':'Ürün ekle'}),
       el('button',{type:'submit',text:'Ekle'})]);
     f.addEventListener('submit',function(e){
       e.preventDefault(); var v=document.getElementById('shopIn').value.trim(); if(!v) return;
-      addProducts(v); mark(S.activeDays); save(); buzz(); render();
+      addProducts(v, lid); mark(S.activeDays); save(); buzz(); render(true);
       setTimeout(function(){ var i=document.getElementById('shopIn'); if(i) i.focus(); },0);
     });
     app.append(f);
-    if(S.shop.length) app.append(el('div',{class:'progress'},[el('span',{text:got.length+'/'+S.shop.length+' alındı'}), el('div',{class:'bar'},[el('i',{style:'width:'+Math.round(got.length/S.shop.length*100)+'%'})])]));
+    if(cur.length) app.append(el('div',{class:'progress'},[el('span',{text:got.length+'/'+cur.length+' alındı'}), el('div',{class:'bar'},[el('i',{style:'width:'+Math.round(got.length/cur.length*100)+'%'})])]));
     var list = el('div',{class:'list'});
-    if(!S.shop.length) list.append(el('div',{class:'empty',text:'Liste boş. Yukarıya ya da Mali\'ye "süt ve ekmek ekle" de.'}));
+    if(!cur.length) list.append(el('div',{class:'empty',text:lid ? 'Liste boş. Yukarıya yaz ya da Mali\'ye "'+S.lists.filter(function(l){return l.id===lid})[0].name.toLocaleLowerCase('tr')+' listesine kulaklık ekle" de.' : 'Liste boş. Yukarıya ya da Mali\'ye "süt ve ekmek ekle" de.'}));
     open.concat(got).forEach(function(x){
       list.append(el('button',{class:'row'+(x.boughtAt?' done':''),type:'button',onclick:function(){
         if(x.boughtAt){ x.boughtAt=null; unaward(2); }
         else {
           x.boughtAt=today();
-          var left=S.shop.filter(function(y){return !y.boughtAt}).length;
+          var left=shopOf(lid).filter(function(y){return !y.boughtAt}).length;
           left ? award(2,'Alındı') : award(12,'Liste bitti 🎉');
         }
-        save(); render();
+        save(); render(true);
       }},[el('span',{class:'box'}), el('span',{class:'t',text:x.name})]));
     });
     app.append(list);
     if(got.length) app.append(el('p',{class:'note',text:'Alınanlar yarın kendiliğinden silinir. Her ürün +2, liste bitince +10 daha.'}));
+    if(lid) app.append(el('button',{class:'textlink',type:'button',text:'Bu listeyi sil',onclick:function(){
+      var l=S.lists.filter(function(x){return x.id===lid})[0]; if(!confirm('"'+l.name+'" listesi'+(cur.length?' ve içindeki '+cur.length+' ürün':'')+' silinsin mi?')) return;
+      S.lists=S.lists.filter(function(x){return x.id!==lid}); S.shop=S.shop.filter(function(x){return x.list!==lid}); view.list=null; save(); render(true); }}));
   }
 
   function renderAdd(){
