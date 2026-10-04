@@ -346,6 +346,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .seg.seg3{grid-template-columns:1fr 1fr 1fr}
 .mrowin{display:grid;grid-template-columns:110px 1fr;gap:8px}
 .mrowin input{min-width:0}
+.medit{padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--line)}
+.medit small{color:var(--ink-2,var(--ink));opacity:.8}
+.medit .chip.on{background:var(--house);color:var(--on-leaf,#fff);border-color:var(--house)}
 .mrow b{flex:none;font-variant-numeric:tabular-nums;font-weight:700}
 .mrow.gider b{color:var(--late)} .mrow.gelir b{color:var(--leaf)} .mrow.yatirim b{color:var(--house)}
 .row.fix .paybtn{flex:none;background:var(--house-tint);color:var(--house);border-radius:12px;padding:10px 14px;font-weight:600;font-size:14px}
@@ -1210,17 +1213,42 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return ymd(d);
   }
   function catOf(s, type){
-    if(type==='gelir') return /(çocuk yardım|kindergeld|çocuk parası)/.test(s) ? 'Çocuk yardımı' : /(kiracı|kiradan|kira gelir)/.test(s) ? 'Kira geliri' : /(borsa|hisse|temettü|kâr payı|etf|fon|faiz)/.test(s) ? 'Borsa geliri' : /maaş/.test(s) ? 'Maaş' : 'Diğer gelir';
-    if(type==='yatirim') return /altın/.test(s) ? 'Altın' : /(kripto|bitcoin)/.test(s) ? 'Kripto' : /(hisse|etf|fon|borsa)/.test(s) ? 'Borsa' : 'Birikim';
-    var C = [['Market',/(market|lidl|aldi|rewe|edeka|penny|netto|kaufland|\sdm\s|bakkal)/],['Araba',/(araba|benzin|otopark|tamir|lastik|yağ değişimi|park)/],
-      ['Ev',/(kira|aidat|ev\s)/],['Fatura',/(fatura|elektrik|internet|telefon|doğalgaz|sigorta)/],['Yemek',/(restoran|yemek|kahve|döner|pizza|kafe)/],
-      ['Ulaşım',/(bilet|tren|mvv|bahn|otobüs|uçak)/],['Sağlık',/(eczane|doktor|ilaç|apotheke)/],['Giyim',/(giyim|ayakkabı|tişört|pantolon|mont)/]];
+    if(type==='gelir') return /(çocuk yardım|kindergeld|çocuk parası)/.test(s) ? 'Çocuk yardımı' : /(kiracı|kiradan|kira gelir)/.test(s) ? 'Kira geliri' : /(borsa|hisse|temettü|kâr payı|\setf|\sfon|faiz)/.test(s) ? 'Borsa geliri' : /maaş/.test(s) ? 'Maaş' : 'Diğer gelir';
+    if(type==='yatirim') return /altın/.test(s) ? 'Altın' : /(kripto|bitcoin)/.test(s) ? 'Kripto' : /(hisse|\setf|\sfon|borsa)/.test(s) ? 'Borsa' : 'Birikim';
+    // önce MAli'nin öğrettikleri: bir kaydın türünü değiştirince o kelime hatırlanır
+    var learned = S.catLearn || {};
+    for(var w in learned) if(learned.hasOwnProperty(w) && (' '+s+' ').indexOf(' '+w) >= 0) return learned[w];
+    var C = [['Market',/(market|lidl|aldi|rewe|edeka|penny|netto|kaufland|\sdm\s|rossmann|bakkal|manav|kasap|fırın|türk market|süpermarket|migros|bim\s|a101|şok\s)/],
+      ['Araba',/(araba|benzin|mazot|dizel|otopark|oto tamir|araba tamir|tamirci|lastik|yağ değişimi|park|tüv|muayene|oto yıkama|garaj|şarj)/],
+      ['Ev',/(kira|aidat|ev\s|nebenkosten|elektrikçi|tesisatçı|temizlik)/],['Fatura',/(fatura|elektrik|internet|telefon|doğalgaz|sigorta|gez|rundfunk|su parası)/],
+      ['Yemek',/(restoran|yemek|kahve|döner|pizza|kafe|burger|lahmacun|kebap|dürüm|pastane|tatlı|dondurma|bira|lieferando|paket servis)/],
+      ['Ulaşım',/(bilet|tren|mvv|bahn|otobüs|uçak|taksi|uber|metro|deutschlandticket|bisiklet kirala)/],
+      ['Sağlık',/(eczane|doktor|ilaç|apotheke|diş|hastane|gözlük|lens|fizyoterapi)/],
+      ['Giyim',/(giyim|ayakkabı|tişört|pantolon|mont|ceket|elbise|kazak|zara|h&m|primark|deichmann)/],
+      ['Çocuk',/(çocuk|bebek|bez\s|mama|oyuncak|kita|kreş|okul|kırtasiye|harçlık)/],
+      ['Bakım',/(berber|kuaför|tıraş|kozmetik|parfüm|şampuan|manikür)/],
+      ['Eğlence',/(sinema|netflix|spotify|disney|youtube|abonelik|konser|oyun|kitap|tatil|otel|gezi|müze|maç)/],
+      ['Ev eşyası',/(ikea|bauhaus|obi|hornbach|mobilya|lamba|perde|halı|mutfak eşyası|tencere|elektronik|media markt|saturn|amazon)/],
+      ['Spor',/(spor salonu|fitness|gym|antrenman|forma|krampon)/],
+      ['Hediye',/(hediye|doğum günü|çiçek|bağış|sadaka|zekat)/]];
     for(var i=0;i<C.length;i++) if(C[i][1].test(s)) return C[i][0];
     return 'Diğer';
   }
+  var GCATS = ['Market','Araba','Ev','Fatura','Yemek','Ulaşım','Sağlık','Giyim','Çocuk','Bakım','Eğlence','Ev eşyası','Spor','Hediye','Diğer'];
+  var STOPW = /^(dün|bugün|evvelsi|geçen|önce|gün|bu|bir|ve|için|da|de|ta|te|aldım|ödedim|harcadım|verdim|tuttu|yaptım|gittim|oldum|euro|avro|lira|tl|mali|ben|biz|sabah|akşam|öğlen|hafta|ay|cuma|pazartesi|salı|çarşamba|perşembe|cumartesi|pazar|üç|iki|beş|on|yüz|bin)$/;
+  // kayıttan öğrenilecek ilk anlamlı kelime: "ikea'dan lamba aldım 30 euro" → "ikea"
+  function keyOf(note){
+    var ws = (note||'').toLocaleLowerCase('tr').replace(/[0-9.,€₺!?]+/g,' ').split(/\s+/);
+    for(var i=0;i<ws.length;i++){ var w = ws[i].split("'")[0].split('’')[0]; if(w.length>=3 && !STOPW.test(w)) return w; }
+    return null;
+  }
+  function setCat(m, c){
+    m.cat = c; var k = keyOf(m.note); if(!k) return;
+    S.catLearn = S.catLearn || {}; S.catLearn[k] = c;
+  }
   var CUR = "(€|euro|avro|eur(?=\\s)|lira|tl(?=\\s)|₺)";
   function moneyOf(s, past, costly){
-    var inv = /(yatırım|hisse|\sfon|etf|altın|kripto|bitcoin|borsa|birikim)/.test(s);
+    var inv = /(yatırım|hisse|\sfon|\setf|altın|kripto|bitcoin|borsa|birikim)/.test(s);
     var inc = /(maaş|gelir|kazandım|prim|ikramiye|iade|yardım|kindergeld|temettü|kiracı|kiradan)/.test(s);
     if(inv && /(temettü|kâr payı|gelir|kazandım|geldi|yattı)/.test(s)){ inv = false; inc = true; }
     var noun = /\s(gider|gelir|harcama|yatırım)\s/.test(s);
@@ -1462,12 +1490,24 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(!ms.length) list.append(el('div',{class:'empty',text:"Bu ay kayıt yok. Mali'ye “markette 45 euro harcadım” ya da “maaş yattı 3000 euro” de."}));
     ms.forEach(function(m){
       var d = dOf(m.date);
-      list.append(el('button',{class:'row mrow '+m.type,type:'button',onclick:function(){ if(!confirm('“'+m.note+'” silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==m}); save(); render(true); }},[
+      var editing = view.mEdit===m.id;
+      list.append(el('button',{class:'row mrow '+m.type+(editing?' on':''),type:'button',onclick:function(){ view.mEdit = editing ? null : m.id; render(true); }},[
         el('span',{class:'tx'},[el('span',{class:'t',text:m.note}), el('small',{text:d.getDate()+' '+AY_UZUN[d.getMonth()]+' · '+MTYPE[m.type]+(m.type==='gelir' ? ' · '+srcOf(m) : '')+' · '+m.cat})]),
         el('b',{text:(m.type==='gider'?'−':'+')+money(m.amount, m.cur)})]));
+      if(editing){
+        var box = el('div',{class:'medit'});
+        if(m.type==='gider'){
+          box.append(el('small',{text:'Türü değiştir (Mali bu kelimeyi öğrenir):'}));
+          var cc = el('div',{class:'chips'});
+          GCATS.forEach(function(c){ cc.append(el('button',{type:'button',class:'chip'+(c===m.cat?' on':''),text:c,onclick:function(){ setCat(m, c); flash('Tür: '+c, keyOf(m.note) ? 'Mali bundan sonra “'+keyOf(m.note)+'” diyince '+c+' yazacak' : ''); view.mEdit=null; save(); render(true); }})); });
+          box.append(cc);
+        }
+        box.append(el('button',{class:'textlink',type:'button',text:'Bu kaydı sil',onclick:function(){ if(!confirm('“'+m.note+'” silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==m}); view.mEdit=null; save(); render(true); }}));
+        list.append(box);
+      }
     });
     app.append(el('div',{class:'label'},[el('span',{text:'Bu ayın kayıtları'})]), list,
-      el('p',{class:'note',text:'Silmek için kayda dokun. TL kayıtlar € toplamına girmez.'}));
+      el('p',{class:'note',text:'Türünü değiştirmek ya da silmek için kayda dokun. TL kayıtlar € toplamına girmez.'}));
   }
 
   // ---------- Bugün: küçük haftalık program + büyük kutucuklar ----------
