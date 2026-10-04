@@ -309,6 +309,16 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
 .wit.hol{background:color-mix(in srgb,var(--leaf) 22%,transparent)}
 .wit.lv{background:color-mix(in srgb,var(--c-note) 26%,transparent)}
 .wit.cd{background:color-mix(in srgb,var(--c-task) 26%,transparent)}
+.wit.fx{background:color-mix(in srgb,var(--c-rt) 24%,transparent)}
+.lg.fx i{background:color-mix(in srgb,var(--c-rt) 55%,transparent)}
+.fgh{display:flex;align-items:baseline;justify-content:space-between;margin:12px 4px 6px;font-size:14px}
+.fgh span{color:var(--ink-2);font-size:12.5px}
+.row.fix.f-late small{color:var(--late);font-weight:600}
+.row.fix.f-soon small{color:var(--sun-deep);font-weight:600}
+.fixedit{display:grid;grid-template-columns:1fr 70px;gap:8px;padding:10px 14px}
+.fixedit input,.fixedit select{min-width:0;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px;font:inherit}
+.fixedit button{grid-column:1/-1}
+.shopadd select{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:0 8px;font:inherit;max-width:120px}
 .wit.nt{background:color-mix(in srgb,var(--c-shop) 26%,transparent)}
 .lg.nt i{background:color-mix(in srgb,var(--c-shop) 55%,transparent)}
 .sheet2 textarea{font:inherit;resize:vertical}
@@ -584,7 +594,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.16.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.17.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -618,6 +628,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(!Array.isArray(S.countdowns)) S.countdowns = [];
     if(!Array.isArray(S.habits)) S.habits = [];
     if(!Array.isArray(S.noteCats)) S.noteCats = ['Genel'];
+    fixMigrate();
     var fk0=S.headings.find(function(h){ return h.id==='fikir'; }); if(fk0 && fk0.name==='Fikir') fk0.name='Notlar';
     if(!Array.isArray(S.tallies)) S.tallies = [];
     if(!Array.isArray(S.leaves)) S.leaves = [];
@@ -684,6 +695,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
   if(!Array.isArray(S.countdowns)) S.countdowns = [];
   if(!Array.isArray(S.noteCats)) S.noteCats = ['Genel'];
+  fixMigrate();
   (function(){ var fk=S.headings.find(function(h){ return h.id==='fikir'; }); if(fk && fk.name==='Fikir') fk.name='Notlar'; })();
   if(!Array.isArray(S.habits)) S.habits = [];
   if(!Array.isArray(S.tallies)) S.tallies = [];
@@ -875,6 +887,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(lv) ev.push({c:'lv', t:'İzin'});
     S.countdowns.forEach(function(c){ if(c.date===k) ev.push({c:'cd', t:c.name}); });
     S.items.forEach(function(i){ if(i.heading==='fikir' && i.remind===k && !i.done) ev.push({c:'nt', t:'Not: '+i.text}); });
+    S.fixed.forEach(function(f){ if(f.day && fixDue(f, k.slice(0,7))===k && !paidFix(f, k.slice(0,7))) ev.push({c:'fx', t:f.name+(f.amount?' '+money(f.amount):'')}); });
     tasksOn(k).filter(function(t){ return !t.parent && (withDone || !t.doneAt); }).forEach(function(t){ ev.push({c:t.dl?'dl':'tk', t:(t.dl?dlTag(t).slice(0,3):(t.time?t.time+' ':''))+t.title, done:!!t.doneAt}); });
     return ev;
   }
@@ -1707,7 +1720,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var tr = S.trackers.filter(function(t){ return t.keys.some(function(k){ return s.indexOf(k)>=0; }); });
     var mo = moneyOf(s.replace(/\s\d{1,2}\s*gün\s*önce/,' '), past, tr.some(function(t){ return t.id==='benzin'||t.id==='yikama'||t.id==='market'; }));
     if(!past && !mo) tr = [];
-    var fx = (past || /\s(ödendi|ödeme)\s/.test(s)) && /\s(ödedim|ödendi|yattı|gitti|verdim|ödeme|yatırdım)\s/.test(s) ? S.fixed.filter(function(f){ var w=f.name.toLocaleLowerCase('tr').split(/\s+/)[0]; return s.indexOf(w.length>5 ? w.slice(0,w.length-2) : w)>=0; }) : [];
+    var fx = (past || /\s(ödendi|ödeme)\s/.test(s)) && /\s(ödedim|ödendi|yattı|gitti|verdim|ödeme|yatırdım)\s/.test(s) ? S.fixed.filter(function(f){ return f.name.toLocaleLowerCase('tr').split(/\s+/).some(function(w,i){ return (i===0 || w.length>=5) && s.indexOf(w.length>5 ? w.slice(0,w.length-2) : w)>=0; }); }) : [];
     if(fx.length) tr = tr.filter(function(t){ return false; });
     if(!tr.length && !mo && !fx.length) return null;
     var who = /\s(eşim|eşimin|eşimden|karım|karımın|hanım|hanımın|kocam|kocamın)\s/.test(s) ? 'es' : 'ben';
@@ -1843,42 +1856,77 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     });
     box.append(cb); return box;
   }
+  // ---------- sabit giderler: gruplar (abonelik, ev, araç…), çekim günü, her ay ödendi / ödenmedi ----------
+  function fixGroupOf(name){ var n=' '+name.toLocaleLowerCase('tr')+' ';
+    if(/(kira|elektrik|\ssu\s|su faturası|internet|doğalgaz|gaz|ısınma|strom|nebenkosten|aidat|rundfunk|gez)/.test(n)) return 'Ev';
+    if(/(araç|araba|leasing|kasko|kfz|otopark|oto )/.test(n)) return 'Araç';
+    if(/(netflix|spotify|prime|disney|youtube|abonelik|icloud|google one|telefon|handy|dazn|apple|claude|chatgpt)/.test(n)) return 'Abonelikler';
+    return 'Diğer'; }
+  function fixMigrate(){
+    if(!Array.isArray(S.fixGroups)) S.fixGroups = ['Abonelikler','Ev','Araç','Diğer'];
+    (S.fixed||[]).forEach(function(f){ if(!f.grp) f.grp = fixGroupOf(f.name); if(S.fixGroups.indexOf(f.grp)<0) S.fixGroups.push(f.grp); });
+  }
+  function fixDue(f, mk){ if(!f.day) return null; var y=+mk.slice(0,4), m=+mk.slice(5,7)-1, last=new Date(y,m+1,0).getDate(); return ymd(new Date(y, m, Math.min(f.day,last))); }
+  function fixState(f, mk){
+    var pd=paidFix(f,mk); if(pd) return {c:'paid', t:'Ödendi · '+dOf(pd.date).getDate()+' '+AY_UZUN[dOf(pd.date).getMonth()]+' · '+money(pd.amount)};
+    var due=fixDue(f,mk), base=(f.amount ? money(f.amount)+' · ' : '')+(f.day ? 'her ayın '+f.day+'. günü'+(f.via?' · '+f.via:'') : 'çekim günü yok');
+    if(due && mk===monthKey(today())){ var n=daysTo(due); if(n<0) return {c:'late', t:'Ödenmedi · '+(-n)+' gün geçti · '+base}; if(n<=3) return {c:'soon', t:(n===0?'Bugün çekilir':n+' gün sonra')+' · '+base}; }
+    return {c:'', t:base};
+  }
   function fixedBlock(mk){
     var cur = mk===monthKey(today()), edit = !!view.fixEdit, box = el('div',{});
-    var head = el('div',{class:'label'},[el('span',{text:'Sabit giderler'}), el('button',{type:'button',text:edit?'Bitti':'Düzenle',onclick:function(){ view.fixEdit=!edit; view.fixAsk=null; render(true); }})]);
-    var list = el('div',{class:'list'});
-    S.fixed.forEach(function(f){
-      var pd = paidFix(f, mk), asking = view.fixAsk===f.id;
-      var sub = pd ? 'Ödendi · '+dOf(pd.date).getDate()+' '+AY_UZUN[dOf(pd.date).getMonth()]+' · '+money(pd.amount) : (f.amount ? money(f.amount)+' · her ay' : 'Tutar yok, ilk ödemede sorarım');
-      var row = el('button',{class:'row fix'+(pd?' done':''),type:'button',onclick:function(){
-        if(edit){ view.fixAsk = asking ? null : f.id; render(true); return; }
-        if(pd){ if(!confirm(f.name+' ödendi kaydı silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==pd}); save(); render(true); return; }
-        if(!cur){ flash('Geçmiş ay','Mali\'ye “geçen ay kirayı ödedim” de'); return; }
-        if(f.amount){ payFixed(f, f.amount); award(5, f.name+' ödendi'); save(); render(true); }
-        else { view.fixAsk = f.id; render(true); }
-      }},[el('span',{class:'box'}), el('span',{class:'tx'},[el('span',{class:'t',text:f.name}), el('small',{text:sub})]),
-        edit ? el('span',{class:'more'},[ic('edit')]) : (pd ? null : el('span',{class:'paybtn',text:'Ödedim'}))]);
-      list.append(row);
-      if(asking){
-        var inp = el('input',{type:'text',inputmode:'decimal',placeholder:'Tutar €','aria-label':f.name+' tutarı',value:f.amount?String(f.amount).replace('.',','):''});
-        var f2 = el('form',{class:'fixform',autocomplete:'off'},[inp, el('button',{type:'submit',class:'primary',text: edit?'Kaydet':'Ödendi'})]);
-        f2.addEventListener('submit',function(e){ e.preventDefault(); var a=parseFloat(inp.value.replace(',','.')); if(!(a>0)){ inp.focus(); return; }
-          if(edit){ f.amount=a; } else { payFixed(f,a); award(5, f.name+' ödendi · '+money(a)); }
-          view.fixAsk=null; save(); render(true); });
-        list.append(f2); setTimeout(function(){ inp.focus(); },50);
-      }
-      if(asking && edit) list.append(el('button',{class:'danger',type:'button',text:f.name+' sabit giderini sil',onclick:function(){
-        if(!confirm(f.name+' listeden silinsin mi? Eski ödemeler kalır.')) return; S.fixed=S.fixed.filter(function(x){return x!==f}); view.fixAsk=null; save(); render(true); }}));
+    var paidN = S.fixed.filter(function(f){ return paidFix(f,mk); }).length, leftSum = S.fixed.filter(function(f){ return !paidFix(f,mk) && f.amount; }).reduce(function(a,f){ return a+f.amount; },0);
+    box.append(el('div',{class:'label'},[el('span',{text:'Sabit giderler · '+paidN+'/'+S.fixed.length+' ödendi'+(leftSum ? ' · kalan '+money(leftSum) : '')}),
+      el('button',{type:'button',text:edit?'Bitti':'Düzenle',onclick:function(){ view.fixEdit=!edit; view.fixAsk=null; render(true); }})]));
+    S.fixGroups.forEach(function(g){
+      var fs = S.fixed.filter(function(f){ return f.grp===g; }).sort(function(a,b){ return (a.day||40)-(b.day||40); });
+      if(!fs.length && !edit) return;
+      var gsum = fs.reduce(function(a,f){ return a+(f.amount||0); },0), gp = fs.filter(function(f){ return paidFix(f,mk); }).length;
+      box.append(el('div',{class:'fgh'},[el('b',{text:g}), el('span',{text:(fs.length ? gp+'/'+fs.length : 'boş')+(gsum ? ' · '+money(gsum) : '')})]));
+      var list = el('div',{class:'list'});
+      fs.forEach(function(f){
+        var pd = paidFix(f, mk), asking = view.fixAsk===f.id, stt = fixState(f, mk);
+        var row = el('button',{class:'row fix'+(pd?' done':'')+(stt.c?' f-'+stt.c:''),type:'button',onclick:function(){
+          if(edit){ view.fixAsk = asking ? null : f.id; render(true); return; }
+          if(pd){ if(!confirm(f.name+' ödendi kaydı silinsin mi?')) return; S.money=S.money.filter(function(x){return x!==pd}); save(); render(true); return; }
+          if(!cur){ flash('Geçmiş ay','Mali\'ye “geçen ay kirayı ödedim” de'); return; }
+          if(f.amount){ payFixed(f, f.amount); award(5, f.name+' ödendi'); save(); render(true); }
+          else { view.fixAsk = f.id; render(true); }
+        }},[el('span',{class:'box'}), el('span',{class:'tx'},[el('span',{class:'t',text:f.name}), el('small',{text:stt.t})]),
+          edit ? el('span',{class:'more'},[ic('edit')]) : (pd ? null : el('span',{class:'paybtn',text:'Ödedim'}))]);
+        list.append(row);
+        if(asking){
+          var inp = el('input',{type:'text',inputmode:'decimal',placeholder:'Tutar €','aria-label':f.name+' tutarı',value:f.amount?String(f.amount).replace('.',','):''});
+          if(!edit){
+            var f2 = el('form',{class:'fixform',autocomplete:'off'},[inp, el('button',{type:'submit',class:'primary',text:'Ödendi'})]);
+            f2.addEventListener('submit',function(e){ e.preventDefault(); var a=parseFloat(inp.value.replace(',','.')); if(!(a>0)){ inp.focus(); return; }
+              payFixed(f,a); award(5, f.name+' ödendi · '+money(a)); view.fixAsk=null; save(); render(true); });
+            list.append(f2); setTimeout(function(){ inp.focus(); },50);
+          } else {
+            var dIn = el('input',{type:'number',min:'1',max:'31',inputmode:'numeric',placeholder:'Gün','aria-label':'Çekim günü',value:f.day?String(f.day):''});
+            var vSel = el('select',{'aria-label':'Nereden çekilir'}); ['','Kart','Banka'].forEach(function(v){ vSel.append(el('option',{value:v,text:v||'Nereden?'})); }); vSel.value=f.via||'';
+            var gSel = el('select',{'aria-label':'Grup'}); S.fixGroups.forEach(function(v){ gSel.append(el('option',{value:v,text:v})); }); gSel.value=f.grp;
+            var f3 = el('form',{class:'fixedit',autocomplete:'off'},[inp, dIn, vSel, gSel, el('button',{type:'submit',class:'primary',text:'Kaydet'})]);
+            f3.addEventListener('submit',function(e){ e.preventDefault(); var a=parseFloat(inp.value.replace(',','.')); f.amount = a>0 ? a : null;
+              var d=parseInt(dIn.value,10); f.day = d>=1 && d<=31 ? d : null; f.via = vSel.value || null; f.grp = gSel.value; view.fixAsk=null; save(); render(true); });
+            list.append(f3, el('button',{class:'danger',type:'button',text:f.name+' sabit giderini sil',onclick:function(){
+              if(!confirm(f.name+' listeden silinsin mi? Eski ödemeler kalır.')) return; S.fixed=S.fixed.filter(function(x){return x!==f}); view.fixAsk=null; save(); render(true); }}));
+          }
+        }
+      });
+      if(fs.length) box.append(list);
     });
-    if(!S.fixed.length) list.append(el('div',{class:'empty',text:'Sabit gider yok. Düzenle → ekle.'}));
-    box.append(head, list);
+    if(!S.fixed.length) box.append(el('div',{class:'empty',text:'Sabit gider yok. Düzenle → ekle.'}));
     if(edit){
-      var nm = el('input',{type:'text',placeholder:'Yeni sabit gider, ör. Spor salonu','aria-label':'Sabit gider adı',maxlength:'24'});
-      var af = el('form',{class:'shopadd',autocomplete:'off'},[nm, el('button',{type:'submit',text:'Ekle'})]);
+      var nm = el('input',{type:'text',placeholder:'Yeni sabit gider, ör. Netflix','aria-label':'Sabit gider adı',maxlength:'24'});
+      var ng = el('select',{'aria-label':'Yeni sabit gider grubu'}); ng.append(el('option',{value:'',text:'Grup: otomatik'})); S.fixGroups.forEach(function(v){ ng.append(el('option',{value:v,text:v})); });
+      var af = el('form',{class:'shopadd',autocomplete:'off'},[nm, ng, el('button',{type:'submit',text:'Ekle'})]);
       af.addEventListener('submit',function(e){ e.preventDefault(); var v=nm.value.trim(); if(!v) return;
-        var low=v.toLocaleLowerCase('tr'); S.fixed.push({id:uid('f'),name:v.charAt(0).toLocaleUpperCase('tr')+v.slice(1),amount:null,cat:catOf(' '+low+' ','gider')}); save(); render(true); });
-      box.append(af);
-    } else box.append(el('p',{class:'note',text:cur ? "Ödeyince “Ödedim”e bas ya da Mali'ye “kirayı ödedim” de. Ay başında hepsi yeniden ödenmedi olur." : 'Geçmiş aylar sadece görüntülenir.'}));
+        var low=v.toLocaleLowerCase('tr'), nf={id:uid('f'),name:v.charAt(0).toLocaleUpperCase('tr')+v.slice(1),amount:null,cat:catOf(' '+low+' ','gider'),grp:ng.value||fixGroupOf(v)};
+        S.fixed.push(nf); view.fixAsk=nf.id; save(); render(true); });
+      box.append(af, el('button',{class:'textlink',type:'button',text:'+ Yeni grup',onclick:function(){ var g=(prompt('Yeni grup adı? (ör. Sigortalar)')||'').trim().slice(0,20); if(!g) return;
+        g=g.charAt(0).toLocaleUpperCase('tr')+g.slice(1); if(S.fixGroups.indexOf(g)<0) S.fixGroups.push(g); save(); render(true); }}));
+    } else box.append(el('p',{class:'note',text:cur ? "Ödeyince “Ödedim”e bas ya da Mali'ye “kirayı ödedim” de. Düzenle'den çekim günü ve grup girersin; günü geçen kırmızı olur." : 'Geçmiş aylar sadece görüntülenir.'}));
     return box;
   }
   function renderMoney(){
@@ -2150,7 +2198,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
         el('span',{class:'wits'}, ev.length ? ev.map(function(e){ return el('span',{class:'wit '+e.c,text:e.t}); }) : [el('span',{class:'wnone',text:'Bugün boş'})])]));
     }
     app.append(box);
-    app.append(el('div',{class:'legend'},[['tk','İş'],['dl','Son tarih (DL)'],['hol','Resmi tatil'],['lv','İzin'],['cd','Sayaç'],['nt','Not'],['we','Hafta sonu']].map(function(x){ return el('span',{class:'lg '+x[0]},[el('i'), x[1]]); })));
+    app.append(el('div',{class:'legend'},[['tk','İş'],['dl','Son tarih (DL)'],['hol','Resmi tatil'],['lv','İzin'],['cd','Sayaç'],['nt','Not'],['fx','Ödeme'],['we','Hafta sonu']].map(function(x){ return el('span',{class:'lg '+x[0]},[el('i'), x[1]]); })));
     // gün sayaçları
     app.append(el('div',{class:'label'},[el('span',{text:'Gün sayaçları'})]));
     var cl = el('div',{class:'list'});
