@@ -105,6 +105,16 @@ button.stat b{color:var(--house)}
 .chain b{display:flex;align-items:center;gap:6px;font-family:var(--display);font-weight:800;font-size:26px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .chain b svg{width:20px;height:20px;color:var(--sun-deep)}
 .chain span{font-size:12.5px;color:var(--ink-2);line-height:1.3}
+.rtbox{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.rthead{display:flex;align-items:center;gap:8px}
+.rthead b{flex:1;font-size:17px}
+.rtch{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-2)}
+.rtch svg{width:16px;height:16px;color:var(--sun-deep)}
+.rted{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:6px 10px;font:inherit;font-size:13px}
+.rtstep{display:flex;align-items:center;gap:8px;padding:6px 2px}
+.rtstep span{flex:1}
+.rtdel{border:0;background:transparent;color:var(--late);font-size:22px;width:36px;height:36px}
+.rtin{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg,transparent);color:var(--ink);border-radius:12px;padding:10px;font:inherit}
 .badgebox{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .badges{display:flex;gap:6px;overflow-x:auto}
 .bdg{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:6px 4px;border-radius:14px;background:var(--card);border:1px solid var(--line);opacity:.4}
@@ -496,7 +506,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     money:[]   // {id,type:gider|gelir|yatirim,amount,cur,cat,note,date,created}
   };
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  var APP_VERSION = '0.10.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
+  var APP_VERSION = '0.11.0';   // her yayında artır ve SURUMLER.md'ye 1 satır yaz
   var view = {name:"home"};
   var app = document.getElementById('app');
 
@@ -527,6 +537,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     Object.keys(DEFAULT).forEach(function(k){ if(S[k]===undefined || (Array.isArray(DEFAULT[k]) && !Array.isArray(S[k]))) S[k] = JSON.parse(JSON.stringify(DEFAULT[k])); });
     if(!Array.isArray(S.shop)) S.shop = [];
     if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
+    if(!Array.isArray(S.routines)) S.routines = RT0();
+    if(!S.rtLog || typeof S.rtLog!=='object') S.rtLog = {};
     if(!Array.isArray(S.tasks)) S.tasks = [];
     if(!Array.isArray(S.logs)) S.logs = [];
     if(!Array.isArray(S.money)) S.money = [];
@@ -581,6 +593,8 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   if(!Array.isArray(S.fixed)) S.fixed = FIX0();
   if(!Array.isArray(S.people)) S.people = PEOPLE0();
   if(!Array.isArray(S.lists)) S.lists = [{id:'online',name:'Online'}];
+  if(!Array.isArray(S.routines)) S.routines = RT0();
+  if(!S.rtLog || typeof S.rtLog!=='object') S.rtLog = {};
   if(!Array.isArray(S.trackers)){ S.trackers = TRACK0(); S.logs = S.logs||[]; S.money = S.money||[]; }
 
 
@@ -589,16 +603,15 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   // zincir: haftada 1 izin günü (kaçan tek gün zinciri koparmaz; 7 gün içinde ikinci kaçış koparır)
   function chainOf(days){
     var set = {}; days.forEach(function(d){ set[d]=1; });
-    var n=0, rest={}, lastRest=-99, i=0, d=new Date();
+    var n=0, rest={}, pend=null, lastRest=-99, i=0, d=new Date();
     if(!set[today()]){ d.setDate(d.getDate()-1); i=1; }
     while(i<400){
       var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      if(set[k]) n++;
-      else if(n>0 || i<=1){ if(i-lastRest<7) break; lastRest=i; rest[k]=1; }
+      if(set[k]){ n++; if(pend){ rest[pend]=1; pend=null; } }
+      else if(!pend && (n>0 || i<=1)){ if(i-lastRest<7) break; lastRest=i; pend=k; }
       else break;
       d.setDate(d.getDate()-1); i++;
     }
-    if(!n) rest={};
     return {n:n, rest:rest};
   }
   function streak(days){ return chainOf(days).n; }
@@ -1259,7 +1272,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
   function roomTiles(){
     var g=el('div',{class:'rooms'});
     S.headings.filter(function(h){return h.type==='room'}).forEach(function(h){
-      var sub = h.empty ? 'Birlikte kuralım' : h.id==='ingilizce' ? 'Dersler' : h.id==='rutinler' ? 'Yakında' : 'Oda';
+      var sub = h.empty ? 'Birlikte kuralım' : h.id==='ingilizce' ? 'Dersler' : h.id==='rutinler' ? rtSub() : 'Oda';
       g.append(el('button',{class:'rtile'+(h.empty?' ghost':''),type:'button',onclick:function(){buzz();view={name:'heading',id:h.id};render();}},[
         hIco(h), el('b',{text:h.empty?'Yeni oda':h.name}), el('small',{text:sub})]));
     });
@@ -1286,6 +1299,9 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     S.money.push({id:uid('m'),type:'gider',amount:amount,cur:'€',cat:f.cat||'Diğer',note:f.name,fx:f.id,date:date||today(),created:Date.now()});
     f.amount = amount; mark(S.activeDays);
   }
+  function RT0(){ return [
+    {id:'sabah', name:'Sabah', days:[], steps:[{id:'s1',t:'Bir bardak su iç'},{id:'s2',t:'Yatağı topla'},{id:'s3',t:'Günün 3 önceliğine bak'}]},
+    {id:'aksam', name:'Akşam', days:[], steps:[{id:'a1',t:'Yarının işlerine bak'},{id:'a2',t:'Telefonu şarja tak'},{id:'a3',t:'10 dakika kitap oku'}]}]; }
   function uid(p){ return p+Date.now()+Math.random().toString(36).slice(2,5); }
   function money(n, cur){ return n.toLocaleString('de-DE',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})+' '+(cur||'€'); }
   function pastDate(s){
@@ -1781,6 +1797,39 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     app.append(list);
   }
 
+  // ---------- Rutinler: sabah / akşam adımları, her biri kendi zinciri ----------
+  function rtDone(r){ var d=S.rtLog[today()]; return (d && d[r.id]) || []; }
+  function rtSub(){ return S.routines.map(function(r){ return r.name+' '+rtDone(r).filter(function(x){return r.steps.some(function(s){return s.id===x;});}).length+'/'+r.steps.length; }).join(' · '); }
+  function rtTap(r, st){
+    var t=today(); S.rtLog[t]=S.rtLog[t]||{}; var a=S.rtLog[t][r.id]=S.rtLog[t][r.id]||[];
+    var i=a.indexOf(st.id); if(i>=0) a.splice(i,1); else a.push(st.id);
+    Object.keys(S.rtLog).forEach(function(k){ if(k<ymd(new Date(Date.now()-20*864e5))) delete S.rtLog[k]; });
+    var all=r.steps.length && r.steps.every(function(s){ return a.indexOf(s.id)>=0; });
+    if(all && r.days.indexOf(t)<0){ r.days.push(t); mark(S.doneDays); award(10, r.name+' rutini bitti'); }
+    else buzz();
+    save(); render(true);
+  }
+  function renderRoutines(h){
+    app.append(el('div',{class:'headrow'},[hIco(h), el('h2',{text:'Rutinler'})]));
+    S.routines.forEach(function(r){
+      var a=rtDone(r), n=chainOf(r.days).n, edit=view.rtEdit===r.id;
+      var box=el('div',{class:'rtbox'},[el('div',{class:'rthead'},[el('b',{text:r.name+' rutini'}),
+        el('span',{class:'rtch'},[ic('flame'), String(n)+' gün']),
+        el('button',{class:'rted',type:'button',text:edit?'Bitti':'Düzenle',onclick:function(){ view.rtEdit=edit?null:r.id; render(true); }})])]);
+      r.steps.forEach(function(st){
+        if(edit) box.append(el('div',{class:'rtstep'},[el('span',{text:st.t}),
+          el('button',{class:'rtdel',type:'button','aria-label':'Adımı sil',text:'×',onclick:function(){ r.steps=r.steps.filter(function(x){return x!==st;}); save(); render(true); }})]));
+        else box.append(el('button',{class:'row'+(a.indexOf(st.id)>=0?' done':''),type:'button',onclick:function(){ rtTap(r,st); }},[el('span',{class:'box'}), el('span',{class:'t',text:st.t})]));
+      });
+      if(edit){ var inp=el('input',{class:'rtin',placeholder:'Yeni adım yaz',enterkeyhint:'done'});
+        var add=function(){ var v=inp.value.trim(); if(!v) return; r.steps.push({id:uid('r'),t:v}); save(); render(true); };
+        inp.addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+        box.append(el('div',{class:'rtstep'},[inp, el('button',{class:'rted',type:'button',text:'Ekle',onclick:add})])); }
+      else if(r.steps.length) box.append(days7(r.days));
+      app.append(box);
+    });
+    app.append(el('p',{class:'note',text:'Rutini bitirince +10 puan, görev zinciri de sayılır.'}));
+  }
   function renderHeading(h){
     if(!h){ view={name:'home'}; return render(); }
     if(h.id!=='yapilacak' && h.id!=='ingilizce') app.append(el('button',{class:'back',type:'button',onclick:function(){view={name:'home'};render();}},[ic('left'),'Bugün']));
@@ -1788,6 +1837,7 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     if(h.id==='yapilacak'){ renderTodo(); return; }
     if(h.type==='room'){
       if(h.id==='ingilizce'){ renderEnglish(); return; }
+      if(h.id==='rutinler'){ renderRoutines(h); return; }
       var txt = h.id==='ingilizce' ? ''
               : h.id==='rutinler' ? 'Sabah ve akşam rutinlerin, her biri kendi zinciriyle. İçeriğini birlikte belirleyeceğiz.'
               : 'Bu oda şimdilik boş. Bir fikrin olduğunda projede bana yaz, birlikte kuralım.';
