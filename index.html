@@ -1093,25 +1093,42 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     return 'Diğer';
   }
   var CUR = "(€|euro|avro|eur(?=\\s)|lira|tl(?=\\s)|₺)";
-  function moneyOf(s, past){
+  function moneyOf(s, past, costly){
     var inv = /(yatırım|hisse|\sfon|etf|altın|kripto|bitcoin|borsa|birikim)/.test(s);
     var inc = /(maaş|gelir|kazandım|prim|ikramiye|iade)/.test(s);
     var noun = /\s(gider|gelir|harcama|yatırım)\s/.test(s);
     if(!past && !noun) return null;
     var m = s.match(new RegExp("(\\d+(?:[.,]\\d{1,2})?)\\s*"+CUR)) ||
-      ((inv||inc||noun||/(harcadım|ödedim|verdim|tuttu)/.test(s)) && s.match(/\s(\d+(?:[.,]\d{1,2})?)(?=\s)/));
+      ((inv||inc||noun||costly||/(harcadım|ödedim|verdim|tuttu)/.test(s)) && s.match(/\s(\d+(?:[.,]\d{1,2})?)(?=\s)(?!\s*(kere|kez|defa|gün|saat|km|kilo|litre|lt|dakika|adet|tane))/));
     if(!m) return null;
     var amount = parseFloat(m[1].replace(',','.')); if(!(amount>0)) return null;
     var type = inv ? 'yatirim' : inc ? 'gelir' : 'gider';
     return {type:type, amount:amount, cur:/(lira|tl|₺)/.test(m[0]) ? 'TL' : '€'};
   }
+  // ses tanıma tutarı bazen yazıyla getirir: "altmış euro" → "60 euro", "yüz yirmi beş euro" → "125 euro"
+  var NUMW = {sıfır:0,bir:1,iki:2,üç:3,dört:4,beş:5,altı:6,yedi:7,sekiz:8,dokuz:9,on:10,yirmi:20,otuz:30,kırk:40,elli:50,altmış:60,yetmiş:70,seksen:80,doksan:90,yüz:100,bin:1000};
+  function numWords(s){
+    var toks = s.split(' '), out = [], i = 0;
+    while(i < toks.length){
+      var j = i, big = false;
+      while(j < toks.length && NUMW.hasOwnProperty(toks[j])){ if(NUMW[toks[j]]>=20) big = true; j++; }
+      var next = toks[j] || '';
+      var cur = /^(€|euro|avro|eur|lira|tl|₺)/.test(next);
+      if(j > i && (cur || ((big || j-i>1) && /^$|^(tuttu|ödedim|harcadım|verdim)$/.test(next)))){
+        var total = 0, c = 0;
+        for(var k=i;k<j;k++){ var v = NUMW[toks[k]]; if(v===100) c = (c||1)*100; else if(v===1000){ total += (c||1)*1000; c = 0; } else c += v; }
+        out.push(String(total + c)); i = j;
+      } else { out.push(toks[i]); i++; }
+    }
+    return out.join(' ');
+  }
   function parseLife(text){
     var s = ' '+text.replace(/[’`]/g,"'").toLocaleLowerCase('tr').replace(/[,.!?]/g,' ')+' ';
-    s = s.replace(/(\d) (\d{1,2}) (€|euro|avro|eur|lira|tl)/,'$1,$2 $3');
+    s = numWords(s).replace(/(\d) (\d{1,2}) (€|euro|avro|eur|lira|tl)/,'$1,$2 $3');
     var past = /(d|t)[ıiuü]m\s/.test(s) || /\s(yattı|geldi|tuttu)\s/.test(s);
     if(!past && /\s(yarın|haftaya|gelecek|önümüzdeki|öbür gün)/.test(s)) return null;
-    var mo = moneyOf(s.replace(/\s\d{1,2}\s*gün\s*önce/,' '), past);
     var tr = S.trackers.filter(function(t){ return t.keys.some(function(k){ return s.indexOf(k)>=0; }); });
+    var mo = moneyOf(s.replace(/\s\d{1,2}\s*gün\s*önce/,' '), past, tr.some(function(t){ return t.id==='benzin'||t.id==='yikama'||t.id==='market'; }));
     if(!past && !mo) tr = [];
     if(!tr.length && !mo) return null;
     return {date:pastDate(s), tr:tr, mo:mo, cat: mo ? (tr.length && mo.type==='gider' ? (tr[0].cat||tr[0].name) : catOf(s, mo.type)) : null};
