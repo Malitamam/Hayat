@@ -14,12 +14,12 @@
    Tasarım şartnamesi: /tasarim/TASARIM-SPEC.md (proje dosyaları). Renk/yazı her zaman token'dan. */
 :root{
   /* Koyu görünüm (Gece petrolü) varsayılan; açık görünüm sadece data-theme="light" ile */
-  --paper:#0A1316; --card:#111D21; --ink:#E7EFEE; --ink-2:#8FA3A6; --line:#213238; --track:#1A2A2F;
+  --paper:#0A1316; --card:#111D21; --ink:#E7EFEE; --ink-2:#8FA3A6; --line:#213238; --track:#24383E;
   --house:#3BA6B8; --on-house:#061114; --house-tint:#123038;
   --sun:#E2AE48; --sun-ink:#2A1C00; --sun-deep:#E2AE48;
   --leaf:#46B983; --on-leaf:#061114; --late:#E46F5C; --late-tint:#36201C;
   --c-shop:#6FA3DD; --c-task:#E2AE48; --c-note:#A396EE; --c-en:#EE7C8F; --c-rt:#55C08E; --c-plan:#BC97E6;
-  --tint:18%; --toast:#1E3036; --toast-ink:#E7EFEE; --scrim:rgba(0,0,0,.6); --shadow:0 12px 32px rgba(0,0,0,.55);
+  --hero:linear-gradient(135deg,#14343C 0%,#0F2025 72%); --tint:18%; --toast:#1E3036; --toast-ink:#E7EFEE; --scrim:rgba(0,0,0,.6); --shadow:0 12px 32px rgba(0,0,0,.55);
   --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
   --body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
   /* eski adlar: kayıtlı başlık renkleri (--r-*) yeni oda renklerine bağlanır */
@@ -32,7 +32,7 @@
   --sun:#F4B740; --sun-ink:#3D2A00; --sun-deep:#A86F00;
   --leaf:#1E7F55; --on-leaf:#FFFFFF; --late:#B83A2A; --late-tint:#FBE9E5;
   --c-shop:#2F6FB3; --c-task:#A86F00; --c-note:#5B4BC9; --c-en:#C23A50; --c-rt:#1F8A5B; --c-plan:#7E4DB5;
-  --tint:12%; --toast:#13252B; --toast-ink:#F4F6F5; --scrim:rgba(19,37,43,.45); --shadow:0 12px 32px rgba(15,76,92,.16); color-scheme:light}
+  --hero:linear-gradient(135deg,#E2EEF0 0%,#FFFFFF 72%); --tint:12%; --toast:#13252B; --toast-ink:#F4F6F5; --scrim:rgba(19,37,43,.45); --shadow:0 12px 32px rgba(15,76,92,.16); color-scheme:light}
 *{box-sizing:border-box}
 html,body{background:var(--paper);margin:0}
 body{color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-inline:16px;padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(112px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
@@ -52,7 +52,7 @@ p{margin:0}
 .pts.pop{transform:scale(1.18)}
 
 /* günün halkası */
-.hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center}
+.hero{background:var(--hero);border:1px solid var(--line);border-radius:22px;padding:16px;display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center}
 .ring{width:88px;height:88px;display:block}
 .ring text{font-family:var(--display);font-weight:800;fill:var(--ink);font-variant-numeric:tabular-nums}
 .ring path{fill:none;stroke-width:9;stroke-linecap:round;stroke:var(--track);transition:stroke .3s .15s}
@@ -61,6 +61,11 @@ p{margin:0}
 .hero small{font-size:13px;color:var(--ink-2);display:block;margin-top:2px}
 .level{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .level strong{color:var(--ink);font-weight:600}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:color-mix(in srgb,var(--paper) 55%,transparent);border:1px solid var(--line);border-radius:14px;padding:8px 10px;text-align:left;font:inherit;color:var(--ink);min-height:56px}
+.stat i{font-style:normal;font-size:11.5px;color:var(--ink-2);display:block}
+.stat b{font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
+button.stat b{color:var(--house)}
 .bar{flex:1;height:6px;background:var(--track);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--sun-deep);border-radius:99px;transition:width .4s}
 
@@ -116,10 +121,10 @@ p{margin:0}
 .latebar svg{width:18px;height:18px}
 
 /* Pazar kartı */
-.review{background:var(--house);color:var(--on-house);border:0;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:10px;text-align:left;font:inherit;width:100%}
-.review b{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15}
-.review small{font-size:14px;opacity:.9}
-.review .go{align-self:flex-start;background:var(--sun);color:var(--sun-ink);border-radius:12px;padding:9px 16px;font-weight:600;font-size:14.5px}
+.review{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px;text-align:left;font:inherit;width:100%}
+.review b{font-family:var(--display);font-weight:800;font-size:18px;line-height:1.2}
+.review small{font-size:13px;color:var(--ink-2);grid-column:1}
+.review .go{grid-column:2;grid-row:1/3;background:var(--sun);color:var(--sun-ink);border-radius:12px;padding:9px 16px;font-weight:600;font-size:14.5px}
 
 /* odalar ve klasörler */
 .rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -1332,7 +1337,11 @@ details.late .list{border-radius:0;border:0;border-top:1px solid var(--line)}
     var head = !total ? 'Bugün için öncelik yok' : done===total ? 'Harika gün, hepsi bitti' : !done ? total+' öncelik seni bekliyor' : total+' öncelikten '+done+EK[done]+' bitti';
     var sub = !total ? "Mali'ye “yarın 10'da dişçi” gibi söyle." : done===total ? 'Bugünün ödülünü aldın.' : 'Hepsi bitince +30 puan';
     app.append(el('div',{class:'hero'},[ring(done,total), el('div',{},[el('b',{text:head}), el('small',{text:sub})]),
-      el('div',{class:'level'},[el('strong',{text:'Seviye '+lvl}), el('div',{class:'bar'},[el('i',{style:'width:'+into+'%'})]), el('span',{text:(100-into)+' puan kaldı'})])]));
+      el('div',{class:'level'},[el('strong',{text:'Seviye '+lvl}), el('div',{class:'bar'},[el('i',{style:'width:'+into+'%'})]), el('span',{text:(100-into)+' puan kaldı'})]),
+      el('div',{class:'stats'},[
+        el('div',{class:'stat'},[el('i',{text:'Görev zinciri'}), el('b',{text:streak(S.doneDays)+' gün'})]),
+        el('div',{class:'stat'},[el('i',{text:'Kayıt zinciri'}), el('b',{text:streak(S.activeDays)+' gün'})]),
+        el('button',{class:'stat',type:'button','aria-label':'Havuzu aç',onclick:function(){view={name:'pool'};render();}},[el('i',{text:'Havuzda'}), el('b',{text:pool.length+' kayıt'})])])]));
     if(late.length) app.append(el('button',{class:'latebar',type:'button',onclick:function(){view={name:'heading',id:'yapilacak',lateOpen:true};render();}},[
       ic('alert'), el('span',{text:'Zamanı geçen '+late.length+' termin var'}), ic('right')]));
     if(pool.length) app.append(el('button',{class:'nudge',type:'button',onclick:function(){view={name:'pool'};render();}},[
